@@ -247,7 +247,6 @@
       border: 1px solid rgba(255,255,255,.07);
     }
 
-    /* Video-area Play overlay: returns every six minutes and on each page load */
     .video-ad-tap-layer {
       position: absolute;
       inset: 0;
@@ -403,6 +402,63 @@
 
     .link-btn:hover {
       background: #342958;
+    }
+
+    .mod-btn {
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: rgba(112, 72, 232, .14);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mod-btn:hover {
+      background: rgba(112, 72, 232, .28);
+    }
+
+    .mod-btn-danger {
+      border-color: rgba(220, 53, 69, .35);
+      background: rgba(220, 53, 69, .14);
+      color: var(--red);
+    }
+
+    .mod-btn-danger:hover {
+      background: rgba(220, 53, 69, .26);
+    }
+
+    .blocked-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 750;
+      color: var(--red);
+      background: rgba(220, 53, 69, .14);
+      border: 1px solid rgba(220, 53, 69, .28);
+    }
+
+    .admin-panel {
+      padding: 11px 15px;
+      background: rgba(112, 72, 232, .08);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .admin-panel-input {
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 12px;
+      min-width: 170px;
     }
 
     [hidden] {
@@ -941,8 +997,26 @@
             Change
           </button>
 
+          <button
+            id="adminLoginToggleBtn"
+            class="link-btn"
+            type="button">
+            Admin Login
+          </button>
+
         </div>
 
+      </div>
+
+
+      <!-- OPTIONAL ADMIN EMAIL/PASSWORD SIGN-IN BAR -->
+
+      <div id="adminAuthBar" class="admin-panel" hidden>
+        <span id="adminAuthStatus">Sign in with your admin email/password to moderate chat:</span>
+        <input id="adminEmailInput" class="admin-panel-input" type="email" placeholder="Admin email" autocomplete="username">
+        <input id="adminPasswordInput" class="admin-panel-input" type="password" placeholder="Admin password" autocomplete="current-password">
+        <button id="adminSignInBtn" class="link-btn" type="button">Sign In</button>
+        <button id="adminSignOutBtn" class="link-btn" type="button" hidden>Sign Out</button>
       </div>
 
 
@@ -1129,9 +1203,6 @@
 
   /* =====================================
      VIDEO-AREA PLAY BUTTON + 6-MIN COOLDOWN
-     - Overlay appears on every page load/refresh.
-     - Clicking Play opens AD_REDIRECT_URL on a trusted click.
-     - After click, overlay hides and returns in 6 minutes.
   ====================================== */
 
   const AD_REDIRECT_URL = "https://arwf.org/4/a20dc74bc92fb6072642a86814bf8e78";
@@ -1159,6 +1230,10 @@
 
   function showVideoPlayOverlay() {
     if (!videoAdTapLayer) return;
+    if (videoPlayTimer) {
+      clearTimeout(videoPlayTimer);
+      videoPlayTimer = null;
+    }
     videoAdTapLayer.hidden = false;
     videoAdTapLayer.style.display = "flex";
     videoPlayButtonBusy = false;
@@ -1276,7 +1351,7 @@
 
 
   <!-- =====================================
-       FIREBASE LIVE CHAT SYSTEM
+       FIREBASE LIVE CHAT + ADMIN MODERATION
   ====================================== -->
 
   <script type="module">
@@ -1287,6 +1362,8 @@
   import {
     getAuth,
     signInAnonymously,
+    signInWithEmailAndPassword,
+    signOut,
     onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -1295,6 +1372,7 @@
     ref,
     set,
     push,
+    remove,
     onValue,
     onDisconnect,
     serverTimestamp,
@@ -1304,7 +1382,7 @@
 
 
   /* =====================================
-     FIREBASE CONFIGURATION
+     FIREBASE + ADMIN CONFIGURATION
   ====================================== */
 
   const firebaseConfig = {
@@ -1329,6 +1407,10 @@
     measurementId: "G-RC9H0J1WNQ"
 
   };
+
+  // Replace with your actual Firebase Auth UID (from Authentication -> Users)
+  const ADMIN_UID = "47cBBjLchhcJn8UKSQkBKoZBUSJ2";
+  const DISPLAY_VIEWER_OFFSET = 1000;
 
 
   /* =====================================
@@ -1366,6 +1448,20 @@
   const activeNameLabelEl = $("activeNameLabel");
 
   const editNameBtn = $("editNameBtn");
+
+  const adminLoginToggleBtn = $("adminLoginToggleBtn");
+
+  const adminAuthBarEl = $("adminAuthBar");
+
+  const adminAuthStatusEl = $("adminAuthStatus");
+
+  const adminEmailInputEl = $("adminEmailInput");
+
+  const adminPasswordInputEl = $("adminPasswordInput");
+
+  const adminSignInBtn = $("adminSignInBtn");
+
+  const adminSignOutBtn = $("adminSignOutBtn");
 
   const nameSetupEl = $("nameSetup");
 
@@ -1409,6 +1505,14 @@
   let presenceByUID = {};
 
   let onlineUIDs = new Set();
+
+  let blockedUIDs = new Set();
+
+  let isCurrentUserBlocked = false;
+
+  function isAdmin() {
+    return Boolean(currentUser && currentUser.uid === ADMIN_UID);
+  }
 
 
   /* =====================================
@@ -1497,19 +1601,41 @@
 
 
   /* =====================================
-     CHAT INTERFACE
+     CHAT + ADMIN INTERFACE
   ====================================== */
+
+  function refreshAdminUI() {
+    const adminActive = isAdmin();
+
+    adminLoginToggleBtn.textContent = adminActive ? "Admin Active" : "Admin Login";
+
+    if (adminActive) {
+      adminAuthStatusEl.textContent = `Signed in as Admin (${currentUser.email || currentUser.uid})`;
+      adminEmailInputEl.hidden = true;
+      adminPasswordInputEl.hidden = true;
+      adminSignInBtn.hidden = true;
+      adminSignOutBtn.hidden = false;
+    } else {
+      adminAuthStatusEl.textContent = currentUser
+        ? `Current UID: ${currentUser.uid} — Sign in with admin account:`
+        : "Sign in with admin account:";
+      adminEmailInputEl.hidden = false;
+      adminPasswordInputEl.hidden = false;
+      adminSignInBtn.hidden = false;
+      adminSignOutBtn.hidden = true;
+    }
+  }
 
   function refreshChatState() {
 
     const canChat = Boolean(
-      currentUser && displayName && !authFailed
+      currentUser && displayName && !authFailed && !isCurrentUserBlocked
     );
 
     nameSetupEl.hidden = Boolean(displayName);
 
     activeNameLabelEl.textContent = displayName
-      ? `Chatting as ${displayName}`
+      ? `Chatting as ${displayName}${isAdmin() ? " (Admin)" : ""}`
       : "";
 
     editNameBtn.hidden = !displayName;
@@ -1518,9 +1644,13 @@
 
     sendBtn.disabled = !canChat;
 
-    chatInputEl.placeholder = canChat
-      ? "Type a message..."
-      : "Choose a name to send messages...";
+    if (isCurrentUserBlocked) {
+      chatInputEl.placeholder = "You are blocked from sending messages.";
+    } else if (canChat) {
+      chatInputEl.placeholder = "Type a message...";
+    } else {
+      chatInputEl.placeholder = "Choose a name to send messages...";
+    }
 
     if (authFailed) {
 
@@ -1532,10 +1662,16 @@
       chatStatusEl.textContent =
         "Connecting to live chat...";
 
-    } else if (displayName) {
+    } else if (isCurrentUserBlocked) {
 
       chatStatusEl.textContent =
-        "You are ready to participate in the live chat.";
+        "You have been blocked by an admin from sending messages.";
+
+    } else if (displayName) {
+
+      chatStatusEl.textContent = isAdmin()
+        ? "Admin mode active: you can delete messages and block/unblock users."
+        : "You are ready to participate in the live chat.";
 
     } else {
 
@@ -1544,7 +1680,56 @@
 
     }
 
+    refreshAdminUI();
+
   }
+
+
+  /* =====================================
+     ADMIN SIGN-IN / SIGN-OUT
+  ====================================== */
+
+  adminLoginToggleBtn.addEventListener("click", () => {
+    adminAuthBarEl.hidden = !adminAuthBarEl.hidden;
+    if (!adminAuthBarEl.hidden && !isAdmin()) {
+      adminEmailInputEl.focus();
+    }
+  });
+
+  adminSignInBtn.addEventListener("click", async () => {
+    const email = adminEmailInputEl.value.trim();
+    const password = adminPasswordInputEl.value;
+    if (!email || !password) {
+      adminAuthStatusEl.textContent = "Enter both admin email and password.";
+      return;
+    }
+    adminSignInBtn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      adminPasswordInputEl.value = "";
+      adminAuthBarEl.hidden = true;
+      chatStatusEl.textContent = "Admin signed in.";
+    } catch (error) {
+      console.error("Admin sign-in failed:", error);
+      adminAuthStatusEl.textContent = `Sign-in failed: ${error.code || "Check credentials."}`;
+    } finally {
+      adminSignInBtn.disabled = false;
+    }
+  });
+
+  adminSignOutBtn.addEventListener("click", async () => {
+    adminSignOutBtn.disabled = true;
+    try {
+      await signOut(auth);
+      await signInAnonymously(auth);
+      chatStatusEl.textContent = "Signed out of admin session.";
+    } catch (error) {
+      console.error("Sign-out failed:", error);
+      chatStatusEl.textContent = "Sign-out failed. Please refresh.";
+    } finally {
+      adminSignOutBtn.disabled = false;
+    }
+  });
 
 
   /* =====================================
@@ -1620,8 +1805,6 @@
 
   /* =====================================
      PRESENCE SYSTEM
-     ALL VISITORS ARE COUNTED
-     NAME IS NOT REQUIRED
   ====================================== */
 
   async function updatePresence() {
@@ -1670,13 +1853,9 @@
   }
 
 
-  /* =====================================
-     SINGLE CONNECTION LISTENER
-  ====================================== */
-
   function startPresenceTracking() {
 
-    if (!currentUser || presenceStarted) return;
+    if (presenceStarted) return;
 
     presenceStarted = true;
 
@@ -1714,6 +1893,35 @@
 
 
   /* =====================================
+     BLOCKED USERS LISTENER
+  ====================================== */
+
+  function startBlockedListener() {
+    onValue(
+      ref(db, "blockedUsers"),
+      snapshot => {
+        const data = snapshot.val() || {};
+        blockedUIDs = new Set(
+          Object.entries(data)
+            .filter(([, blocked]) => blocked === true)
+            .map(([uid]) => uid)
+        );
+
+        isCurrentUserBlocked = Boolean(
+          currentUser && blockedUIDs.has(currentUser.uid)
+        );
+
+        refreshChatState();
+        renderMessages();
+      },
+      error => {
+        console.error("Blocked users listener error:", error);
+      }
+    );
+  }
+
+
+  /* =====================================
      VIEWER COUNT + PRESENCE DATA
   ====================================== */
 
@@ -1729,7 +1937,7 @@
 
         const onlineUsers = Object.entries(
           presenceByUID
-        ).filter(([uid, user]) => {
+        ).filter(([, user]) => {
 
           return user && user.online === true;
 
@@ -1752,7 +1960,6 @@
         eyePupil.setAttribute("r", "3");
         eyeIcon.append(eyePath, eyePupil);
         const viewerText = document.createElement("span");
-        const DISPLAY_VIEWER_OFFSET = 1000;
         viewerText.textContent = `${onlineUIDs.size + DISPLAY_VIEWER_OFFSET} Watching`;
         viewerCountEl.replaceChildren(eyeIcon, viewerText);
 
@@ -1801,6 +2008,8 @@
       return;
 
     }
+
+    const adminView = isAdmin();
 
     chatMessages.forEach(message => {
 
@@ -1858,6 +2067,68 @@
 
         }
 
+        if (blockedUIDs.has(message.uid)) {
+          const blockedTag = makeElement(
+            "span",
+            "blocked-badge",
+            "Blocked"
+          );
+          authorRow.appendChild(blockedTag);
+        }
+
+      }
+
+      if (adminView && message.uid) {
+
+        if (message.id) {
+          const delBtn = makeElement(
+            "button",
+            "mod-btn mod-btn-danger",
+            "Delete"
+          );
+          delBtn.type = "button";
+          delBtn.addEventListener("click", async () => {
+            delBtn.disabled = true;
+            try {
+              await remove(ref(db, `messages/${message.id}`));
+              chatStatusEl.textContent = "Message deleted.";
+            } catch (error) {
+              console.error("Failed to delete message:", error);
+              chatStatusEl.textContent = "Could not delete message.";
+              delBtn.disabled = false;
+            }
+          });
+          authorRow.appendChild(delBtn);
+        }
+
+        if (message.uid !== "47cBBjLchhcJn8UKSQkBKoZBUSJ2") {
+          const alreadyBlocked = blockedUIDs.has(message.uid);
+          const blockBtn = makeElement(
+            "button",
+            "mod-btn",
+            alreadyBlocked ? "Unblock" : "Block"
+          );
+          blockBtn.type = "button";
+          blockBtn.addEventListener("click", async () => {
+            blockBtn.disabled = true;
+            try {
+              const targetRef = ref(db, `blockedUsers/${message.uid}`);
+              if (blockedUIDs.has(message.uid)) {
+                await remove(targetRef);
+                chatStatusEl.textContent = "User unblocked from messaging.";
+              } else {
+                await set(targetRef, true);
+                chatStatusEl.textContent = "User blocked from messaging.";
+              }
+            } catch (error) {
+              console.error("Failed to toggle user block:", error);
+              chatStatusEl.textContent = "Could not update user block status.";
+              blockBtn.disabled = false;
+            }
+          });
+          authorRow.appendChild(blockBtn);
+        }
+
       }
 
       const content = makeElement(
@@ -1887,7 +2158,6 @@
 
   /* =====================================
      CHAT MESSAGE LISTENER
-     EVERY AUTHENTICATED VISITOR CAN READ
   ====================================== */
 
   function startMessageListener() {
@@ -1910,7 +2180,10 @@
 
         snapshot.forEach(child => {
 
-          chatMessages.push(child.val());
+          chatMessages.push({
+            id: child.key,
+            ...child.val()
+          });
 
         });
 
@@ -1965,7 +2238,6 @@
 
   /* =====================================
      SEND MESSAGE (NO AD TRIGGER ON SEND)
-     DISPLAY NAME REQUIRED
   ====================================== */
 
   chatFormEl.addEventListener(
@@ -1974,7 +2246,7 @@
 
       event.preventDefault();
 
-      if (!currentUser || !displayName || authFailed) {
+      if (!currentUser || !displayName || authFailed || isCurrentUserBlocked) {
 
         refreshChatState();
 
@@ -2040,7 +2312,7 @@
       } finally {
 
         const canChat = Boolean(
-          currentUser && displayName && !authFailed
+          currentUser && displayName && !authFailed && !isCurrentUserBlocked
         );
 
         chatInputEl.disabled = !canChat;
@@ -2059,7 +2331,6 @@
 
   /* =====================================
      LAST-SEEN REFRESH
-     Updates displayed relative time every minute
   ====================================== */
 
   setInterval(() => {
@@ -2077,25 +2348,41 @@
 
     auth,
 
-    user => {
+    async user => {
 
       currentUser = user;
 
-      if (!user) return;
+      if (!user) {
+        isCurrentUserBlocked = false;
+        refreshChatState();
+        renderMessages();
+        return;
+      }
 
       authFailed = false;
+      isCurrentUserBlocked = blockedUIDs.has(user.uid);
 
       refreshChatState();
 
       startPresenceTracking();
 
+      if (presenceConnected) {
+        await updatePresence();
+      }
+
       if (!listenersStarted) {
 
         listenersStarted = true;
 
+        startBlockedListener();
+
         startViewerTracking();
 
         startMessageListener();
+
+      } else {
+
+        renderMessages();
 
       }
 

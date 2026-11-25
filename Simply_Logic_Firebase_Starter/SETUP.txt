@@ -1,0 +1,24 @@
+SIMPLY LOGIC STUDIOS - NEW FIREBASE STARTER
+
+1. Use Simply_Logic_Studios_New_UI_Firebase_Starter.html as your website index.html.
+2. Keep the two ad scripts at the top exactly as supplied. The video ad destination and cooldown are also retained from your source.
+3. In the HTML, replace firebaseConfig values with the config from Firebase Console > Project settings > Your apps > Web app.
+4. Create Authentication > Sign-in method > Anonymous and enable it.
+5. Create an admin account in Authentication > Sign-in method > Email/Password, then create that user in Authentication > Users.
+6. Copy the admin user's UID and replace PASTE_NEW_ADMIN_UID_HERE in BOTH index.html and database.rules.json.
+7. Import database.rules.json into Realtime Database > Rules and publish.
+8. Deploy the HTML to your Cloudflare Pages project.
+
+LAST 30 MESSAGES
+- Website loads and displays only the latest 30 messages using limitToLast(30).
+- To ensure the database itself retains no more than 30 messages even when the admin is offline, deploy the included Cloud Function.
+- Cloud Functions deployment requires the Firebase Blaze (billing) plan. Review billing and set budget alerts before enabling it. Without the function, the admin browser performs cleanup while the admin is online, but strict storage retention cannot be guaranteed from untrusted client code alone.
+
+FUNCTION DEPLOYMENT (after installing Firebase CLI and signing in)
+- Open terminal in this folder.
+- Run: firebase use --add   (select your NEW project)
+- Run: firebase deploy --only database
+- Run: cd functions && npm install && cd ..
+- Run: firebase deploy --only functions
+
+Test from two separate browsers/devices: send a message from one and verify it appears on the other. Test admin login, delete, block/unblock, name change, theme toggle, video, and ads before replacing your old production site.

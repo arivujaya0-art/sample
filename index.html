@@ -1498,6 +1498,8 @@
 
   let authFailed = false;
 
+  let anonymousSignInInProgress = false;
+
   let lastSendTime = 0;
 
   let shouldAutoScroll = true;
@@ -1723,7 +1725,8 @@
     adminSignOutBtn.disabled = true;
     try {
       await signOut(auth);
-      await signInAnonymously(auth);
+      // The auth-state listener below automatically signs in anonymously
+      // after sign-out. Avoid calling signInAnonymously twice.
       chatStatusEl.textContent = "Signed out of admin session.";
     } catch (error) {
       console.error("Sign-out failed:", error);
@@ -2363,11 +2366,32 @@
         isCurrentUserBlocked = false;
         refreshChatState();
         renderMessages();
+
+        // Only sign in anonymously when Firebase has restored no user.
+        // This preserves a previously signed-in admin account.
+        if (!anonymousSignInInProgress) {
+          anonymousSignInInProgress = true;
+          signInAnonymously(auth)
+            .catch(error => {
+              authFailed = true;
+              console.error("Anonymous authentication failed:", error);
+              viewerCountEl.textContent = "Connection unavailable";
+              chatStatusEl.textContent =
+                `Anonymous sign-in failed: ${error.code || error.message}`;
+              refreshChatState();
+            })
+            .finally(() => {
+              anonymousSignInInProgress = false;
+            });
+        }
         return;
       }
 
       authFailed = false;
       isCurrentUserBlocked = blockedUIDs.has(user.uid);
+
+      console.info("Firebase authenticated UID:", user.uid);
+      console.info("Admin UID match:", user.uid === ADMIN_UID);
 
       refreshChatState();
 
@@ -2409,25 +2433,9 @@
 
   /* =====================================
      ANONYMOUS LOGIN
+     Started only from onAuthStateChanged when
+     Firebase has no restored signed-in user.
   ====================================== */
-
-  signInAnonymously(auth).catch(error => {
-
-    authFailed = true;
-
-    console.error(
-      "Anonymous authentication failed:",
-      error
-    );
-
-    viewerCountEl.textContent = "Connection unavailable";
-
-    chatStatusEl.textContent =
-      "Unable to connect. Please refresh the page.";
-
-    refreshChatState();
-
-  });
 
   </script>
 

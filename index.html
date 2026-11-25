@@ -2242,7 +2242,7 @@
      SEND MESSAGE (NO AD TRIGGER ON SEND)
   ====================================== */
 
-  chatFormEl.addEventListener(
+ chatFormEl.addEventListener(
     "submit",
     async event => {
 
@@ -2256,15 +2256,20 @@
 
       }
 
-      const messageText = chatInputEl.value
+      const cleanName = String(displayName)
+        .trim()
+        .slice(0, MAX_NAME_LENGTH);
+
+      const messageText = String(chatInputEl.value || "")
         .trim()
         .slice(0, MAX_MESSAGE_LENGTH);
 
-      if (!messageText) return;
+      if (!cleanName || !messageText) return;
 
       const now = Date.now();
 
       if (now - lastSendTime < SEND_COOLDOWN) {
+        chatStatusEl.textContent = "Please wait a moment before sending another message.";
         return;
       }
 
@@ -2284,7 +2289,7 @@
 
             uid: currentUser.uid,
 
-            name: displayName,
+            name: cleanName,
 
             text: messageText,
 

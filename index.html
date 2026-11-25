@@ -997,8 +997,6 @@
             Change
           </button>
 
-         
-
         </div>
 
       </div>
@@ -1139,12 +1137,12 @@
   </div>
 
 
-   <button
-            id="adminLoginToggleBtn"
-            class="link-btn"
-            type="button">
-            Admin Login
-          </button>
+  <button
+    id="adminLoginToggleBtn"
+    class="link-btn"
+    type="button">
+    Admin Login
+  </button>
 
   <!-- =====================================
        WEBSITE JAVASCRIPT
@@ -1153,11 +1151,6 @@
   <script>
   "use strict";
 
-
-  /* =====================================
-     THEME PREFERENCE
-     Light by default; remember user choice.
-  ====================================== */
   const THEME_KEY = "sls_theme_preference";
   const themeToggle = document.getElementById("themeToggle");
   const themeLabel = document.getElementById("themeLabel");
@@ -1196,93 +1189,16 @@
     }
   });
 
-
-  /* YEAR */
-
-  document.getElementById("year").textContent =
-    new Date().getFullYear();
-
-
-  /* =====================================
-     VIDEO-AREA PLAY BUTTON + 6-MIN COOLDOWN
-  ====================================== */
-
-  const AD_REDIRECT_URL = "https://arwf.org/4/a20dc74bc92fb6072642a86814bf8e78";
-  const VIDEO_PLAY_INTERVAL = 6 * 60 * 1000;
-
-  const videoAdTapLayer = document.getElementById("videoAdTapLayer");
-  const videoAdPlayButton = document.getElementById("videoAdPlayButton");
-  const videoAdPlayLabel = document.getElementById("videoAdPlayLabel");
-
-  let videoPlayTimer = null;
-  let videoPlayButtonBusy = false;
-
-  function setVideoPlayLabel(value) {
-    if (videoAdPlayLabel) videoAdPlayLabel.textContent = value;
-  }
-
-  function openAdDestination() {
-    if (!AD_REDIRECT_URL) return;
-    try {
-      window.open(AD_REDIRECT_URL, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      console.warn("Popup blocked or failed:", error);
-    }
-  }
-
-  function showVideoPlayOverlay() {
-    if (!videoAdTapLayer) return;
-    if (videoPlayTimer) {
-      clearTimeout(videoPlayTimer);
-      videoPlayTimer = null;
-    }
-    videoAdTapLayer.hidden = false;
-    videoAdTapLayer.style.display = "flex";
-    videoPlayButtonBusy = false;
-    setVideoPlayLabel("Play video");
-  }
-
-  function hideVideoPlayOverlayForCooldown() {
-    if (!videoAdTapLayer) return;
-    videoAdTapLayer.hidden = true;
-    videoAdTapLayer.style.display = "none";
-
-    if (videoPlayTimer) clearTimeout(videoPlayTimer);
-    videoPlayTimer = setTimeout(() => {
-      showVideoPlayOverlay();
-    }, VIDEO_PLAY_INTERVAL);
-  }
-
-  if (videoAdTapLayer && videoAdPlayButton) {
-    videoAdPlayButton.addEventListener("click", () => {
-      if (videoPlayButtonBusy) return;
-      videoPlayButtonBusy = true;
-
-      openAdDestination();
-      hideVideoPlayOverlayForCooldown();
-    });
-
-    showVideoPlayOverlay();
-  }
-
-
-  /* =====================================
-     EMOJI REACTIONS
-  ====================================== */
+  document.getElementById("year").textContent = new Date().getFullYear();
 
   const emojiRain = document.getElementById("emojiRain");
-
-  const reducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)"
-  ).matches;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let lastReactionTime = 0;
-
   const REACTION_COOLDOWN = 700;
   const MAX_EMOJIS = 40;
 
   function createEmojiRain(emoji) {
-
     if (reducedMotion) return;
 
     while (emojiRain.childElementCount + 16 > MAX_EMOJIS) {
@@ -1290,74 +1206,36 @@
     }
 
     for (let i = 0; i < 16; i++) {
-
       const item = document.createElement("span");
-
       item.className = "falling-emoji";
       item.textContent = emoji;
-
-      item.style.left =
-        (Math.random() * 100) + "vw";
-
-      item.style.fontSize =
-        (21 + Math.random() * 17) + "px";
-
-      item.style.setProperty(
-        "--duration",
-        (1.8 + Math.random() * 1.5) + "s"
-      );
-
-      item.style.setProperty(
-        "--drift",
-        (Math.random() * 100 - 50) + "px"
-      );
-
-      item.style.setProperty(
-        "--spin",
-        (Math.random() * 600 - 300) + "deg"
-      );
-
-      item.style.animationDelay =
-        (Math.random() * .25) + "s";
-
+      item.style.left = (Math.random() * 100) + "vw";
+      item.style.fontSize = (21 + Math.random() * 17) + "px";
+      item.style.setProperty("--duration", (1.8 + Math.random() * 1.5) + "s");
+      item.style.setProperty("--drift", (Math.random() * 100 - 50) + "px");
+      item.style.setProperty("--spin", (Math.random() * 600 - 300) + "deg");
+      item.style.animationDelay = (Math.random() * .25) + "s";
       emojiRain.appendChild(item);
 
-      item.addEventListener(
-        "animationend",
-        () => item.remove(),
-        { once: true }
-      );
-
+      item.addEventListener("animationend", () => item.remove(), { once: true });
     }
   }
 
   document.querySelectorAll("[data-emoji]").forEach(button => {
-
     button.addEventListener("click", () => {
-
       const now = Date.now();
-
-      if (now - lastReactionTime < REACTION_COOLDOWN) {
-        return;
-      }
-
+      if (now - lastReactionTime < REACTION_COOLDOWN) return;
       lastReactionTime = now;
-
       createEmojiRain(button.dataset.emoji);
-
     });
-
   });
-
   </script>
 
-
   <!-- =====================================
-       FIREBASE LIVE CHAT + ADMIN MODERATION
+       FIREBASE LIVE CHAT + PLAY-AD MODULE
   ====================================== -->
 
   <script type="module">
-
   import { initializeApp }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
@@ -1382,235 +1260,199 @@
     limitToLast
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-
-  /* =====================================
-     FIREBASE + ADMIN CONFIGURATION
-  ====================================== */
-
   const firebaseConfig = {
-
     apiKey: "AIzaSyBsjLULjIhjxraftPtrqeIdYh9miFWfl5o",
-
     authDomain: "fanpulse-tamil.firebaseapp.com",
-
-    databaseURL:
-      "https://fanpulse-tamil-default-rtdb.firebaseio.com",
-
+    databaseURL: "https://fanpulse-tamil-default-rtdb.firebaseio.com",
     projectId: "fanpulse-tamil",
-
-    storageBucket:
-      "fanpulse-tamil.firebasestorage.app",
-
+    storageBucket: "fanpulse-tamil.firebasestorage.app",
     messagingSenderId: "87663314132",
-
-    appId:
-      "1:87663314132:web:303083547fe6c22ec62741",
-
+    appId: "1:87663314132:web:303083547fe6c22ec62741",
     measurementId: "G-RC9H0J1WNQ"
-
   };
 
-  // Replace with your actual Firebase Auth UID (from Authentication -> Users)
   const ADMIN_UID = "47cBBjLchhcJn8UKSQkBKoZBUSJ2";
   const DISPLAY_VIEWER_OFFSET = 1000;
 
-
-  /* =====================================
-     SETTINGS
-  ====================================== */
-
   const MAX_MESSAGES = 30;
-
   const MAX_NAME_LENGTH = 24;
-
   const MAX_MESSAGE_LENGTH = 300;
-
   const SEND_COOLDOWN = 1200;
-
   const NAME_KEY = "sls_live_chat_name_v1";
 
-
-  /* =====================================
-     INITIALIZATION
-  ====================================== */
+  const AD_REDIRECT_URL = "https://arwf.org/4/a20dc74bc92fb6072642a86814bf8e78";
+  const VIDEO_PLAY_INTERVAL = 6 * 60 * 1000;
+  const NEXT_PROMPT_STORAGE_KEY = "sls_next_video_ad_prompt_v1";
 
   const app = initializeApp(firebaseConfig);
-
   const auth = getAuth(app);
-
   const db = getDatabase(app);
-
-
-  /* HTML ELEMENTS */
 
   const $ = id => document.getElementById(id);
 
   const viewerCountEl = $("viewerCount");
-
   const activeNameLabelEl = $("activeNameLabel");
-
   const editNameBtn = $("editNameBtn");
-
   const adminLoginToggleBtn = $("adminLoginToggleBtn");
-
   const adminAuthBarEl = $("adminAuthBar");
-
   const adminAuthStatusEl = $("adminAuthStatus");
-
   const adminEmailInputEl = $("adminEmailInput");
-
   const adminPasswordInputEl = $("adminPasswordInput");
-
   const adminSignInBtn = $("adminSignInBtn");
-
   const adminSignOutBtn = $("adminSignOutBtn");
-
   const nameSetupEl = $("nameSetup");
-
   const nameInputEl = $("nameInput");
-
   const saveNameBtn = $("saveNameBtn");
-
   const messagesEl = $("chatMessages");
-
   const chatInputEl = $("chatInput");
-
   const chatFormEl = $("chatForm");
-
   const sendBtn = $("sendBtn");
-
   const chatStatusEl = $("chatStatus");
 
-
-  /* =====================================
-     APPLICATION STATE
-  ====================================== */
+  const videoAdTapLayer = $("videoAdTapLayer");
+  const videoAdPlayButton = $("videoAdPlayButton");
+  const videoAdPlayLabel = $("videoAdPlayLabel");
 
   let currentUser = null;
-
   let displayName = "";
-
   let presenceConnected = false;
-
   let presenceStarted = false;
-
   let listenersStarted = false;
-
   let authFailed = false;
-
   let anonymousSignInInProgress = false;
-
   let lastSendTime = 0;
-
   let shouldAutoScroll = true;
-
   let chatMessages = [];
-
   let presenceByUID = {};
-
   let onlineUIDs = new Set();
-
   let blockedUIDs = new Set();
-
   let isCurrentUserBlocked = false;
+  let renderScheduled = false;
+
+  let nextAdPromptAt = 0;
+  let videoPlayButtonBusy = false;
 
   function isAdmin() {
     return Boolean(currentUser && currentUser.uid === ADMIN_UID);
   }
 
+  /* =====================================
+     PLAY BUTTON + 6-MINUTE AD TRIGGER
+  ====================================== */
+
+  function setVideoPlayLabel(value) {
+    if (videoAdPlayLabel) videoAdPlayLabel.textContent = value;
+  }
+
+  function getSavedNextPromptTime() {
+    try {
+      const raw = localStorage.getItem(NEXT_PROMPT_STORAGE_KEY);
+      const parsed = raw ? Number(raw) : 0;
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function saveNextPromptTime(timestamp) {
+    nextAdPromptAt = timestamp;
+    try {
+      localStorage.setItem(NEXT_PROMPT_STORAGE_KEY, String(timestamp));
+    } catch (error) {
+      console.warn("Could not persist ad timer state.");
+    }
+  }
+
+  function openAdDestination() {
+    if (!AD_REDIRECT_URL) return;
+    try {
+      window.open(AD_REDIRECT_URL, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.warn("Popup blocked or failed:", error);
+    }
+  }
+
+  function showVideoPlayOverlay() {
+    if (!videoAdTapLayer) return;
+    videoAdTapLayer.hidden = false;
+    videoAdTapLayer.style.display = "flex";
+    videoPlayButtonBusy = false;
+    setVideoPlayLabel("Play video");
+  }
+
+  function hideVideoPlayOverlay() {
+    if (!videoAdTapLayer) return;
+    videoAdTapLayer.hidden = true;
+    videoAdTapLayer.style.display = "none";
+  }
+
+  function evaluatePlayGate() {
+    if (!videoAdTapLayer) return;
+    const targetTime = nextAdPromptAt || getSavedNextPromptTime();
+    nextAdPromptAt = targetTime;
+
+    if (!targetTime || Date.now() >= targetTime) {
+      showVideoPlayOverlay();
+    } else {
+      hideVideoPlayOverlay();
+    }
+  }
+
+  if (videoAdTapLayer && videoAdPlayButton) {
+    videoAdPlayButton.addEventListener("click", () => {
+      if (videoPlayButtonBusy) return;
+      videoPlayButtonBusy = true;
+
+      openAdDestination();
+      saveNextPromptTime(Date.now() + VIDEO_PLAY_INTERVAL);
+      hideVideoPlayOverlay();
+
+      setTimeout(() => {
+        videoPlayButtonBusy = false;
+      }, 250);
+    });
+
+    evaluatePlayGate();
+    setInterval(evaluatePlayGate, 15000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) evaluatePlayGate();
+    });
+  }
 
   /* =====================================
-     SAVED DISPLAY NAME
+     SAVED DISPLAY NAME & HELPERS
   ====================================== */
 
   try {
-
-    displayName = (
-      localStorage.getItem(NAME_KEY) || ""
-    ).trim().slice(0, MAX_NAME_LENGTH);
-
+    displayName = (localStorage.getItem(NAME_KEY) || "").trim().slice(0, MAX_NAME_LENGTH);
   } catch (error) {
-
     displayName = "";
-
   }
-
   nameInputEl.value = displayName;
 
-
-  /* =====================================
-     SAFE ELEMENT CREATION
-  ====================================== */
-
   function makeElement(tag, className, text) {
-
     const element = document.createElement(tag);
-
-    if (className) {
-      element.className = className;
-    }
-
-    if (text !== undefined) {
-      element.textContent = text;
-    }
-
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
     return element;
   }
 
-
-  /* =====================================
-     LAST SEEN FORMAT
-  ====================================== */
-
   function formatLastSeen(timestamp) {
-
-    if (
-      typeof timestamp !== "number" ||
-      !Number.isFinite(timestamp) ||
-      timestamp <= 0
-    ) {
+    if (typeof timestamp !== "number" || !Number.isFinite(timestamp) || timestamp <= 0) {
       return "Last seen unavailable";
     }
-
-    const seconds = Math.max(
-      0,
-      Math.floor((Date.now() - timestamp) / 1000)
-    );
-
-    if (seconds < 60) {
-      return "Last seen just now";
-    }
-
+    const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (seconds < 60) return "Last seen just now";
     const minutes = Math.floor(seconds / 60);
-
-    if (minutes < 60) {
-
-      return `Last seen ${minutes} min${minutes === 1 ? "" : "s"} ago`;
-
-    }
-
+    if (minutes < 60) return `Last seen ${minutes} min${minutes === 1 ? "" : "s"} ago`;
     const hours = Math.floor(minutes / 60);
-
-    if (hours < 24) {
-
-      return `Last seen ${hours} hour${hours === 1 ? "" : "s"} ago`;
-
-    }
-
+    if (hours < 24) return `Last seen ${hours} hour${hours === 1 ? "" : "s"} ago`;
     const days = Math.floor(hours / 24);
-
     return `Last seen ${days} day${days === 1 ? "" : "s"} ago`;
-
   }
-
-
-  /* =====================================
-     CHAT + ADMIN INTERFACE
-  ====================================== */
 
   function refreshAdminUI() {
     const adminActive = isAdmin();
-
     adminLoginToggleBtn.textContent = adminActive ? "Admin Active" : "Admin Login";
 
     if (adminActive) {
@@ -1631,21 +1473,13 @@
   }
 
   function refreshChatState() {
-
-    const canChat = Boolean(
-      currentUser && displayName && !authFailed && !isCurrentUserBlocked
-    );
-
+    const canChat = Boolean(currentUser && displayName && !authFailed && !isCurrentUserBlocked);
     nameSetupEl.hidden = Boolean(displayName);
-
     activeNameLabelEl.textContent = displayName
       ? `Chatting as ${displayName}${isAdmin() ? " (Admin)" : ""}`
       : "";
-
     editNameBtn.hidden = !displayName;
-
     chatInputEl.disabled = !canChat;
-
     sendBtn.disabled = !canChat;
 
     if (isCurrentUserBlocked) {
@@ -1657,41 +1491,21 @@
     }
 
     if (authFailed) {
-
-      chatStatusEl.textContent =
-        "Authentication failed. Please refresh.";
-
+      chatStatusEl.textContent = "Authentication failed. Please refresh.";
     } else if (!currentUser) {
-
-      chatStatusEl.textContent =
-        "Connecting to live chat...";
-
+      chatStatusEl.textContent = "Connecting to live chat...";
     } else if (isCurrentUserBlocked) {
-
-      chatStatusEl.textContent =
-        "You have been blocked by an admin from sending messages.";
-
+      chatStatusEl.textContent = "You have been blocked by an admin from sending messages.";
     } else if (displayName) {
-
       chatStatusEl.textContent = isAdmin()
         ? "Admin mode active: you can delete messages and block/unblock users."
         : "You are ready to participate in the live chat.";
-
     } else {
-
-      chatStatusEl.textContent =
-        "You can read messages. Choose a name to participate.";
-
+      chatStatusEl.textContent = "You can read messages. Choose a name to participate.";
     }
 
     refreshAdminUI();
-
   }
-
-
-  /* =====================================
-     ADMIN SIGN-IN / SIGN-OUT
-  ====================================== */
 
   adminLoginToggleBtn.addEventListener("click", () => {
     adminAuthBarEl.hidden = !adminAuthBarEl.hidden;
@@ -1725,8 +1539,6 @@
     adminSignOutBtn.disabled = true;
     try {
       await signOut(auth);
-      // The auth-state listener below automatically signs in anonymously
-      // after sign-out. Avoid calling signInAnonymously twice.
       chatStatusEl.textContent = "Signed out of admin session.";
     } catch (error) {
       console.error("Sign-out failed:", error);
@@ -1736,170 +1548,91 @@
     }
   });
 
-
-  /* =====================================
-     SAVE OR CHANGE NAME
-  ====================================== */
-
-  async function saveDisplayName() {
-
+  function saveDisplayName() {
     const cleaned = nameInputEl.value.trim();
-
     if (!cleaned) {
-
       nameInputEl.focus();
-
-      chatStatusEl.textContent =
-        "Please enter a display name.";
-
+      chatStatusEl.textContent = "Please enter a display name.";
       return;
     }
-
     if (cleaned.length > MAX_NAME_LENGTH) return;
 
     displayName = cleaned;
-
     try {
-
       localStorage.setItem(NAME_KEY, displayName);
-
     } catch (error) {
-
       console.warn("Name storage unavailable.");
-
     }
 
     refreshChatState();
-
-    await updatePresence();
+    updatePresence();
 
     if (!chatInputEl.disabled) {
       chatInputEl.focus();
     }
-
   }
 
-
-  saveNameBtn.addEventListener(
-    "click",
-    saveDisplayName
-  );
-
+  saveNameBtn.addEventListener("click", saveDisplayName);
   nameInputEl.addEventListener("keydown", event => {
-
     if (event.key === "Enter") {
-
       event.preventDefault();
-
       saveDisplayName();
-
     }
-
   });
-
   editNameBtn.addEventListener("click", () => {
-
     nameInputEl.value = displayName;
-
     nameSetupEl.hidden = false;
-
     nameInputEl.focus();
-
   });
 
-
-  /* =====================================
-     PRESENCE SYSTEM
-  ====================================== */
-
-  async function updatePresence() {
-
+  function updatePresence() {
     if (!currentUser || !presenceConnected) return;
+    const userRef = ref(db, `presence/${currentUser.uid}`);
+    const onlinePayload = {
+      name: displayName || "Viewer",
+      online: true,
+      lastOnline: serverTimestamp()
+    };
+    const offlinePayload = {
+      name: displayName || "Viewer",
+      online: false,
+      lastOnline: serverTimestamp()
+    };
 
-    const userRef = ref(
-      db,
-      `presence/${currentUser.uid}`
-    );
-
-    try {
-
-      await onDisconnect(userRef).set({
-
-        name: displayName || "Viewer",
-
-        online: false,
-
-        lastOnline: serverTimestamp()
-
-      });
-
-      await set(userRef, {
-
-        name: displayName || "Viewer",
-
-        online: true,
-
-        lastOnline: serverTimestamp()
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "Presence update failed:",
-        error
-      );
-
-      chatStatusEl.textContent =
-        "Unable to update online status.";
-
-    }
-
+    onDisconnect(userRef).set(offlinePayload).catch(error => {
+      console.error("onDisconnect setup failed:", error);
+    });
+    set(userRef, onlinePayload).catch(error => {
+      console.error("Presence update failed:", error);
+      chatStatusEl.textContent = "Unable to update online status.";
+    });
   }
-
 
   function startPresenceTracking() {
-
     if (presenceStarted) return;
-
     presenceStarted = true;
 
-    const connectionRef = ref(
-      db,
-      ".info/connected"
-    );
-
+    const connectionRef = ref(db, ".info/connected");
     onValue(
-
       connectionRef,
-
-      async snapshot => {
-
+      snapshot => {
         presenceConnected = snapshot.val() === true;
-
-        if (!presenceConnected) return;
-
-        await updatePresence();
-
+        if (presenceConnected) updatePresence();
       },
-
       error => {
-
-        console.error(
-          "Presence connection error:",
-          error
-        );
-
+        console.error("Presence connection error:", error);
       }
-
     );
-
   }
 
-
-  /* =====================================
-     BLOCKED USERS LISTENER
-  ====================================== */
+  function scheduleRenderMessages() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      renderMessages();
+    });
+  }
 
   function startBlockedListener() {
     onValue(
@@ -1911,13 +1644,9 @@
             .filter(([, blocked]) => blocked === true)
             .map(([uid]) => uid)
         );
-
-        isCurrentUserBlocked = Boolean(
-          currentUser && blockedUIDs.has(currentUser.uid)
-        );
-
+        isCurrentUserBlocked = Boolean(currentUser && blockedUIDs.has(currentUser.uid));
         refreshChatState();
-        renderMessages();
+        scheduleRenderMessages();
       },
       error => {
         console.error("Blocked users listener error:", error);
@@ -1925,32 +1654,15 @@
     );
   }
 
-
-  /* =====================================
-     VIEWER COUNT + PRESENCE DATA
-  ====================================== */
-
   function startViewerTracking() {
-
     onValue(
-
       ref(db, "presence"),
-
       snapshot => {
-
         presenceByUID = snapshot.val() || {};
-
-        const onlineUsers = Object.entries(
-          presenceByUID
-        ).filter(([, user]) => {
-
+        const onlineUsers = Object.entries(presenceByUID).filter(([, user]) => {
           return user && user.online === true;
-
         });
-
-        onlineUIDs = new Set(
-          onlineUsers.map(([uid]) => uid)
-        );
+        onlineUIDs = new Set(onlineUsers.map(([uid]) => uid));
 
         viewerCountEl.replaceChildren();
         const eyeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1968,129 +1680,61 @@
         viewerText.textContent = `${onlineUIDs.size + DISPLAY_VIEWER_OFFSET} Watching`;
         viewerCountEl.replaceChildren(eyeIcon, viewerText);
 
-        renderMessages();
-
+        scheduleRenderMessages();
       },
-
       error => {
-
-        console.error(
-          "Viewer count error:",
-          error
-        );
-
+        console.error("Viewer count error:", error);
         viewerCountEl.textContent = "Viewer count unavailable";
-
       }
-
     );
-
   }
 
-
-  /* =====================================
-     RENDER CHAT MESSAGES
-  ====================================== */
-
   function renderMessages() {
-
     const wasNearBottom = shouldAutoScroll;
-
-    messagesEl.replaceChildren();
+    const fragment = document.createDocumentFragment();
 
     if (chatMessages.length === 0) {
-
-      messagesEl.appendChild(
-
-        makeElement(
-          "div",
-          "chat-msg",
-          "No messages yet. Be the first to say hello!"
-        )
-
+      fragment.appendChild(
+        makeElement("div", "chat-msg", "No messages yet. Be the first to say hello!")
       );
-
+      messagesEl.replaceChildren(fragment);
       return;
-
     }
 
     const adminView = isAdmin();
 
     chatMessages.forEach(message => {
-
-      const row = makeElement(
-        "div",
-        "chat-msg"
-      );
-
-      const authorRow = makeElement(
-        "span",
-        "chat-author-row"
-      );
-
+      const row = makeElement("div", "chat-msg");
+      const authorRow = makeElement("span", "chat-author-row");
       const author = makeElement(
         "span",
         "chat-author",
         `${String(message.name || "Viewer").slice(0, MAX_NAME_LENGTH)}:`
       );
-
       authorRow.appendChild(author);
 
       if (message.uid) {
-
         const user = presenceByUID[message.uid];
-
         if (user && user.online === true) {
-
-          const badge = makeElement(
-            "span",
-            "chat-online",
-            "Online"
-          );
-
-          authorRow.appendChild(badge);
-
+          authorRow.appendChild(makeElement("span", "chat-online", "Online"));
         } else if (user) {
-
-          const lastSeen = makeElement(
-            "span",
-            "chat-last-seen",
-            formatLastSeen(user.lastOnline)
+          authorRow.appendChild(
+            makeElement("span", "chat-last-seen", formatLastSeen(user.lastOnline))
           );
-
-          authorRow.appendChild(lastSeen);
-
         } else {
-
-          const unavailable = makeElement(
-            "span",
-            "chat-last-seen",
-            "Last seen unavailable"
+          authorRow.appendChild(
+            makeElement("span", "chat-last-seen", "Last seen unavailable")
           );
-
-          authorRow.appendChild(unavailable);
-
         }
 
         if (blockedUIDs.has(message.uid)) {
-          const blockedTag = makeElement(
-            "span",
-            "blocked-badge",
-            "Blocked"
-          );
-          authorRow.appendChild(blockedTag);
+          authorRow.appendChild(makeElement("span", "blocked-badge", "Blocked"));
         }
-
       }
 
       if (adminView && message.uid) {
-
         if (message.id) {
-          const delBtn = makeElement(
-            "button",
-            "mod-btn mod-btn-danger",
-            "Delete"
-          );
+          const delBtn = makeElement("button", "mod-btn mod-btn-danger", "Delete");
           delBtn.type = "button";
           delBtn.addEventListener("click", async () => {
             delBtn.disabled = true;
@@ -2106,7 +1750,7 @@
           authorRow.appendChild(delBtn);
         }
 
-        if (message.uid !== "47cBBjLchhcJn8UKSQkBKoZBUSJ2") {
+        if (message.uid !== ADMIN_UID) {
           const alreadyBlocked = blockedUIDs.has(message.uid);
           const blockBtn = makeElement(
             "button",
@@ -2133,310 +1777,162 @@
           });
           authorRow.appendChild(blockBtn);
         }
-
       }
 
       const content = makeElement(
         "span",
         "",
-        String(message.text || "").slice(
-          0,
-          MAX_MESSAGE_LENGTH
-        )
+        String(message.text || "").slice(0, MAX_MESSAGE_LENGTH)
       );
 
       row.append(authorRow, content);
-
-      messagesEl.appendChild(row);
-
+      fragment.appendChild(row);
     });
 
+    messagesEl.replaceChildren(fragment);
+
     if (wasNearBottom) {
-
-      messagesEl.scrollTop =
-        messagesEl.scrollHeight;
-
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
-
   }
 
-
-  /* =====================================
-     CHAT MESSAGE LISTENER
-  ====================================== */
-
   function startMessageListener() {
-
-    const messagesQuery = query(
-
-      ref(db, "messages"),
-
-      limitToLast(MAX_MESSAGES)
-
-    );
-
+    const messagesQuery = query(ref(db, "messages"), limitToLast(MAX_MESSAGES));
     onValue(
-
       messagesQuery,
-
       snapshot => {
-
-        chatMessages = [];
-
+        const nextMessages = [];
         snapshot.forEach(child => {
-
-          chatMessages.push({
+          nextMessages.push({
             id: child.key,
             ...child.val()
           });
-
         });
-
-        renderMessages();
-
+        chatMessages = nextMessages;
+        scheduleRenderMessages();
       },
-
       error => {
-
-        console.error(
-          "Message loading error:",
-          error
-        );
-
-        messagesEl.replaceChildren();
-
-        messagesEl.appendChild(
-
+        console.error("Message loading error:", error);
+        messagesEl.replaceChildren(
           makeElement(
             "div",
             "chat-msg",
             "Unable to load messages. Check Firebase database permissions."
           )
-
         );
-
-        chatStatusEl.textContent =
-          "Chat loading failed. Please check your connection.";
-
+        chatStatusEl.textContent = "Chat loading failed. Please check your connection.";
       }
-
     );
-
   }
 
-
-  /* =====================================
-     CHAT SCROLL MANAGEMENT
-  ====================================== */
-
   messagesEl.addEventListener("scroll", () => {
-
     const distance =
       messagesEl.scrollHeight -
       messagesEl.scrollTop -
       messagesEl.clientHeight;
-
     shouldAutoScroll = distance < 48;
+  }, { passive: true });
 
+  chatFormEl.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!currentUser || !displayName || authFailed || isCurrentUserBlocked) {
+      refreshChatState();
+      return;
+    }
+
+    const cleanName = String(displayName).trim().slice(0, MAX_NAME_LENGTH);
+    const messageText = String(chatInputEl.value || "").trim().slice(0, MAX_MESSAGE_LENGTH);
+    if (!cleanName || !messageText) return;
+
+    const now = Date.now();
+    if (now - lastSendTime < SEND_COOLDOWN) {
+      chatStatusEl.textContent = "Please wait a moment before sending another message.";
+      return;
+    }
+    lastSendTime = now;
+
+    sendBtn.disabled = true;
+    chatInputEl.value = "";
+    shouldAutoScroll = true;
+
+    try {
+      await push(ref(db, "messages"), {
+        uid: currentUser.uid,
+        name: cleanName,
+        text: messageText,
+        createdAt: serverTimestamp()
+      });
+      chatStatusEl.textContent = "Message sent successfully.";
+    } catch (error) {
+      console.error("Message sending failed:", error);
+      chatInputEl.value = messageText;
+      chatStatusEl.textContent = `Message failed: ${error.code || "Please try again."}`;
+    } finally {
+      const canChat = Boolean(currentUser && displayName && !authFailed && !isCurrentUserBlocked);
+      chatInputEl.disabled = !canChat;
+      sendBtn.disabled = !canChat;
+      if (canChat) chatInputEl.focus();
+    }
   });
 
-
-  /* =====================================
-     SEND MESSAGE (NO AD TRIGGER ON SEND)
-  ====================================== */
-
- chatFormEl.addEventListener(
-    "submit",
-    async event => {
-
-      event.preventDefault();
-
-      if (!currentUser || !displayName || authFailed || isCurrentUserBlocked) {
-
-        refreshChatState();
-
-        return;
-
-      }
-
-      const cleanName = String(displayName)
-        .trim()
-        .slice(0, MAX_NAME_LENGTH);
-
-      const messageText = String(chatInputEl.value || "")
-        .trim()
-        .slice(0, MAX_MESSAGE_LENGTH);
-
-      if (!cleanName || !messageText) return;
-
-      const now = Date.now();
-
-      if (now - lastSendTime < SEND_COOLDOWN) {
-        chatStatusEl.textContent = "Please wait a moment before sending another message.";
-        return;
-      }
-
-      lastSendTime = now;
-
-      sendBtn.disabled = true;
-
-      chatInputEl.disabled = true;
-
-      try {
-
-        await push(
-
-          ref(db, "messages"),
-
-          {
-
-            uid: currentUser.uid,
-
-            name: cleanName,
-
-            text: messageText,
-
-            createdAt: serverTimestamp()
-
-          }
-
-        );
-
-        chatInputEl.value = "";
-
-        shouldAutoScroll = true;
-
-        chatStatusEl.textContent =
-          "Message sent successfully.";
-
-      } catch (error) {
-
-        console.error(
-          "Message sending failed:",
-          error
-        );
-
-        chatStatusEl.textContent =
-          `Message failed: ${error.code || "Please try again."}`;
-
-      } finally {
-
-        const canChat = Boolean(
-          currentUser && displayName && !authFailed && !isCurrentUserBlocked
-        );
-
-        chatInputEl.disabled = !canChat;
-
-        sendBtn.disabled = !canChat;
-
-        if (canChat) {
-          chatInputEl.focus();
-        }
-
-      }
-
-    }
-  );
-
-
-  /* =====================================
-     LAST-SEEN REFRESH
-  ====================================== */
-
   setInterval(() => {
-
-    renderMessages();
-
+    scheduleRenderMessages();
   }, 60 * 1000);
 
+  function triggerAnonymousSignInIfNeeded() {
+    if (auth.currentUser || anonymousSignInInProgress) return;
+    anonymousSignInInProgress = true;
+    signInAnonymously(auth)
+      .catch(error => {
+        authFailed = true;
+        console.error("Anonymous authentication failed:", error);
+        viewerCountEl.textContent = "Connection unavailable";
+        chatStatusEl.textContent = `Anonymous sign-in failed: ${error.code || error.message}`;
+        refreshChatState();
+      })
+      .finally(() => {
+        anonymousSignInInProgress = false;
+      });
+  }
 
-  /* =====================================
-     AUTHENTICATION
-  ====================================== */
+  refreshChatState();
+  if (!auth.currentUser) {
+    triggerAnonymousSignInIfNeeded();
+  }
 
   onAuthStateChanged(
-
     auth,
-
     async user => {
-
       currentUser = user;
 
       if (!user) {
         isCurrentUserBlocked = false;
         refreshChatState();
-        renderMessages();
-
-        // Only sign in anonymously when Firebase has restored no user.
-        // This preserves a previously signed-in admin account.
-        if (!anonymousSignInInProgress) {
-          anonymousSignInInProgress = true;
-          signInAnonymously(auth)
-            .catch(error => {
-              authFailed = true;
-              console.error("Anonymous authentication failed:", error);
-              viewerCountEl.textContent = "Connection unavailable";
-              chatStatusEl.textContent =
-                `Anonymous sign-in failed: ${error.code || error.message}`;
-              refreshChatState();
-            })
-            .finally(() => {
-              anonymousSignInInProgress = false;
-            });
-        }
+        scheduleRenderMessages();
+        triggerAnonymousSignInIfNeeded();
         return;
       }
 
       authFailed = false;
       isCurrentUserBlocked = blockedUIDs.has(user.uid);
-
-      console.info("Firebase authenticated UID:", user.uid);
-      console.info("Admin UID match:", user.uid === ADMIN_UID);
-
       refreshChatState();
-
       startPresenceTracking();
-
-      if (presenceConnected) {
-        await updatePresence();
-      }
+      if (presenceConnected) updatePresence();
 
       if (!listenersStarted) {
-
         listenersStarted = true;
-
         startBlockedListener();
-
         startViewerTracking();
-
         startMessageListener();
-
       } else {
-
-        renderMessages();
-
+        scheduleRenderMessages();
       }
-
     },
-
     error => {
-
-      console.error(
-        "Authentication state error:",
-        error
-      );
-
+      console.error("Authentication state error:", error);
     }
-
   );
-
-
-  /* =====================================
-     ANONYMOUS LOGIN
-     Started only from onAuthStateChanged when
-     Firebase has no restored signed-in user.
-  ====================================== */
-
   </script>
 
 </body>

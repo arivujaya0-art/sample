@@ -1940,7 +1940,7 @@ header{padding:14px 0}
   const fullscreenButton = document.createElement("button");
   fullscreenButton.type = "button";
   fullscreenButton.className = "sls-fullscreen-btn";
-  fullscreenButton.textContent = "⛶ Fullscreen + Chat";
+  fullscreenButton.textContent = "⛶";
   fullscreenButton.setAttribute("aria-label", "Open fullscreen video with live chat");
   player.appendChild(fullscreenButton);
 
@@ -1966,7 +1966,7 @@ header{padding:14px 0}
 
   function syncButton() {
     const active = isCustomFullscreen();
-    fullscreenButton.textContent = active ? "✕ Exit fullscreen" : "⛶ Fullscreen + Chat";
+    fullscreenButton.textContent = active ? "✕ Exit fullscreen" : "⛶";
     fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Open fullscreen video with live chat");
   }
 

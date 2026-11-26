@@ -25,8 +25,90 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
 .intro{padding:30px 0 18px}.eyebrow{color:var(--accent);font-size:11px;font-weight:900;letter-spacing:1.8px}.intro h1{margin:7px 0 4px;font-size:clamp(30px,5vw,46px);line-height:1.12;letter-spacing:-1.5px}.intro p{margin:0;color:var(--muted);font-size:14px}
 .card,.chat-card{overflow:hidden;margin:0 0 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}.section-heading,.chat-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px}.section-heading h2,.chat-header h2{margin:0;font-size:17px;font-weight:850;letter-spacing:-.3px}.player{position:relative;overflow:hidden;aspect-ratio:16/9;background:#03050a}.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.video-ad-tap-layer{position:absolute;z-index:5;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#070914aa,#07091444)}.video-ad-play-button{display:flex;align-items:center;gap:10px;border:1px solid #ffffff55;border-radius:999px;padding:13px 22px;color:#fff;background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 12px 35px #0006;font-weight:850}.video-ad-play-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#ffffff26}
 .chat-card{padding:0}.chat-header{flex-wrap:wrap;border-bottom:1px solid var(--line)}.chat-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.viewer-count{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;color:var(--green);background:color-mix(in srgb,var(--green) 10%,transparent);font-size:11px;font-weight:800}.viewer-icon{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}.active-name{color:var(--muted);font-size:11px;font-weight:700}.link-btn{border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--text);background:var(--panel2);font-size:12px;font-weight:750}.link-btn:hover{border-color:var(--accent);color:var(--accent)}.admin-panel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 18px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:12px}.admin-panel-input{min-width:150px;flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:var(--text);background:var(--bg2)}.name-setup{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}.name-setup-row{display:flex;gap:9px}.name-input,.chat-input{width:100%;min-width:0;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text);background:var(--bg2)}.name-input::placeholder,.chat-input::placeholder{color:var(--muted)}.chat-btn{border:0;border-radius:13px;padding:11px 18px;color:#fff;background:linear-gradient(135deg,#7c3aed,#c026d3);font-weight:850;white-space:nowrap;box-shadow:0 6px 20px #7c3aed25}.chat-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.chat-btn:disabled,.chat-input:disabled{opacity:.55;cursor:not-allowed}.chat-messages{height:clamp(260px,42vh,440px);overflow:auto;padding:17px 18px;background:var(--panel);overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}.chat-msg{display:block;margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);overflow-wrap:anywhere}.chat-author-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}.chat-author{color:var(--accent);font-size:12px;font-weight:900}.chat-online,.chat-last-seen,.blocked-badge{font-size:10px;font-weight:750}.chat-online{color:var(--green)}.chat-online::before{content:"";display:inline-block;width:6px;height:6px;margin-right:5px;border-radius:50%;background:var(--green)}.chat-last-seen{color:var(--muted)}.blocked-badge{padding:2px 7px;border-radius:999px;color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}.mod-btn{border:1px solid var(--line);border-radius:7px;padding:3px 7px;color:var(--text);background:var(--panel);font-size:10px;font-weight:800}.mod-btn-danger{color:var(--red)}.mod-btn:hover,.mod-btn-danger:hover{border-color:var(--accent)}.chat-form{display:flex;gap:9px;padding:14px 18px 8px}.chat-status{padding:5px 18px 15px;color:var(--muted);font-size:11px}
-.reactions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:17px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow);margin:0 0 24px}.reaction-btn{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);font-size:21px;transition:transform .15s}.reaction-btn:hover{transform:translateY(-3px) scale(1.05);border-color:var(--accent)}.reaction-btn:active{transform:scale(.92)}.reaction-hint{width:100%;text-align:center;color:var(--muted);font-size:11px}.footer{text-align:center;padding:10px 0 28px;color:var(--muted);font-size:11px}.footer p{margin:5px}.emoji-rain{position:fixed;inset:0;z-index:20;pointer-events:none;overflow:hidden}.falling-emoji{position:absolute;top:-40px;animation:fall linear forwards}@keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.1}}
-@media(max-width:620px){.container{width:min(100% - 18px,1120px)}header{padding:14px 0}.brand-sub{max-width:165px}.header-actions{gap:6px}.theme-toggle{padding:8px 10px}.live-pill{padding:6px 8px}.intro{padding:24px 0 14px}.section-heading,.chat-header{padding:15px}.chat-meta{width:100%}.admin-panel{padding:12px}.name-setup,.chat-form{padding-left:12px;padding-right:12px}.chat-messages{padding:12px;height:360px}.chat-status{padding-left:12px;padding-right:12px}.name-setup-row{flex-direction:column}.name-setup-row .chat-btn{width:100%}.chat-form{gap:7px}.chat-form .chat-btn{padding:10px 14px}.reactions{gap:7px;padding:13px}.reaction-btn{width:39px;height:39px}}
+.reactions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:17px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow);margin:0 0 24px}.reaction-btn{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);font-size:21px;transition:transform .15s}.reaction-btn:hover{transform:translateY(-3px) scale(1.05);border-color:var(--accent)}.reaction-btn:active{transform:scale(.92)}.reaction-hint{width:100%;text-align:center;color:var(--muted);font-size:11px}.footer{text-align:center;padding:10px 0 28px;color:var(--muted);font-size:11px}.footer p{margin:5px}.emoji-rain{position:fixed;inset:0;z-index:20;pointer-events:none;overflow:hidden}
+.falling-emoji{
+  position:absolute;
+  top:-40px;
+  animation:fall var(--duration,2.5s) linear forwards;
+  will-change:transform,opacity;
+}
+@keyframes fall{
+  to{
+    transform:translate(var(--drift,0px),110vh) rotate(var(--spin,360deg));
+    opacity:.1;
+  }
+}
+.falling-emoji.reduced-motion-emoji{
+  position:fixed;
+  top:38%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  animation:none;
+  font-size:56px!important;
+  opacity:1;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.25));
+}
+
+@media(max-width:620px){
+.container{width:min(100% - 18px,1120px)}
+header{padding:14px 0}
+.brand-sub{max-width:165px}
+.header-actions{gap:6px}
+.theme-toggle{padding:8px 10px}
+.live-pill{padding:6px 8px}
+.intro{padding:24px 0 14px}
+.section-heading,.chat-header{padding:15px}
+.chat-meta{width:100%}
+.admin-panel{padding:12px}
+.name-setup,.chat-form{padding-left:12px;padding-right:12px}
+.chat-messages{padding:12px;height:190px}
+.chat-status{padding-left:12px;padding-right:12px}
+.name-setup-row{flex-direction:column}
+.name-setup-row .chat-btn{width:100%}
+.chat-form{gap:7px}
+.chat-form .chat-btn{padding:10px 14px}
+.reactions{gap:7px;padding:13px}
+.reaction-btn{width:39px;height:39px}
+}
+
+/* Mobile typing mode: keep a compact video visible without changing the
+   Firebase/chat structure. The video card becomes a small fixed mini-player
+   only while the chat input is focused. */
+@media(max-width:620px){
+  body.mobile-chat-typing .card[aria-label="Live video player"]{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:100;
+    margin:0;
+    padding:6px 8px;
+    border-radius:0 0 14px 14px;
+    background:var(--panel);
+    box-shadow:0 8px 24px rgba(0,0,0,.22);
+  }
+  body.mobile-chat-typing .card[aria-label="Live video player"] .section-heading{
+    padding:5px 8px;
+  }
+  body.mobile-chat-typing .card[aria-label="Live video player"] .section-heading h2{
+    font-size:13px;
+  }
+  body.mobile-chat-typing .card[aria-label="Live video player"] .live-pill{
+    padding:4px 7px;
+    font-size:9px;
+  }
+  body.mobile-chat-typing .card[aria-label="Live video player"] .player{
+    height:clamp(76px,16dvh,108px);
+    aspect-ratio:auto;
+  }
+  body.mobile-chat-typing .chat-messages{
+    height:110px;
+  }
+  body.mobile-chat-typing .chat-input{
+    scroll-margin-top:130px;
+    scroll-margin-bottom:12px;
+  }
+}
 </style>
 </head>
 
@@ -436,7 +518,17 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
 
   function createEmojiRain(emoji) {
 
-    if (reducedMotion) return;
+    if (!emojiRain) return;
+
+    // Respect reduced-motion settings but still show a visible reaction.
+    if (reducedMotion) {
+      const reaction = document.createElement("span");
+      reaction.className = "falling-emoji reduced-motion-emoji";
+      reaction.textContent = emoji;
+      emojiRain.appendChild(reaction);
+      window.setTimeout(() => reaction.remove(), 1000);
+      return;
+    }
 
     while (emojiRain.childElementCount + 16 > MAX_EMOJIS) {
       emojiRain.firstElementChild?.remove();
@@ -1633,6 +1725,30 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
   ====================================== */
 
   </script>
+
+
+<script>
+/* Mobile-only compact video while the user is typing in live chat. */
+(() => {
+  const input = document.getElementById("chatInput");
+  if (!input) return;
+  const className = "mobile-chat-typing";
+
+  input.addEventListener("focus", () => {
+    if (window.matchMedia("(max-width: 620px)").matches) {
+      document.body.classList.add(className);
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      if (document.activeElement !== input) {
+        document.body.classList.remove(className);
+      }
+    }, 150);
+  });
+})();
+</script>
 
 </body>
 </html>

@@ -141,31 +141,44 @@ header{padding:14px 0}
   touch-action:manipulation
 }
 #slsFullscreenChat{
-  display:none;position:absolute;z-index:25;right:2.5%;bottom:7%;
-  width:min(36%,420px);max-height:72%;overflow:hidden;
-  flex-direction:column;justify-content:flex-end;gap:8px;
-  padding:12px;pointer-events:none;
-  mask-image:linear-gradient(to bottom,transparent 0%,black 16%);
+  display:none;position:absolute;z-index:2147483000;right:2%;bottom:8%;
+  width:min(29%,300px);max-height:42%;overflow:hidden;
+  flex-direction:column;justify-content:flex-end;gap:4px;
+  padding:5px;pointer-events:none;
+  mask-image:linear-gradient(to bottom,transparent 0%,black 10%);
 }
 .player:fullscreen #slsFullscreenChat,
 .player:-webkit-full-screen #slsFullscreenChat,
 .player.sls-fullscreen-fallback #slsFullscreenChat{display:flex}
 .sls-fs-message{
-  align-self:flex-end;max-width:100%;padding:7px 11px;
-  border-radius:13px;background:rgba(8,12,22,.66);
-  color:#fff;font-size:clamp(12px,1.8vw,20px);line-height:1.3;
+  align-self:flex-end;max-width:100%;padding:4px 7px;
+  border-radius:9px;background:rgba(8,12,22,.58);
+  color:#fff;font-size:clamp(10px,1.15vw,14px);line-height:1.22;
   overflow-wrap:anywhere;text-shadow:0 1px 2px #000;
-  animation:slsFsMessageIn .22s ease-out both
+  animation:slsFsMessageIn .18s ease-out both
 }
-.sls-fs-name{color:#facc15;font-weight:900;margin-right:5px}
-@keyframes slsFsMessageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sls-fs-name{color:#facc15;font-weight:850;margin-right:4px}
+.sls-fs-exit{
+  display:none;position:absolute;z-index:2147483647;top:9px;left:9px;
+  border:1px solid #ffffff77;border-radius:999px;padding:7px 11px;
+  color:#fff;background:rgba(8,12,22,.82);font-size:11px;font-weight:900;
+  cursor:pointer;touch-action:manipulation;backdrop-filter:blur(6px)
+}
+.player:fullscreen .sls-fs-exit,
+.player:-webkit-full-screen .sls-fs-exit,
+.player.sls-fullscreen-fallback .sls-fs-exit{display:block}
+.player:fullscreen .sls-fullscreen-btn,
+.player:-webkit-full-screen .sls-fullscreen-btn,
+.player.sls-fullscreen-fallback .sls-fullscreen-btn{display:none}
+@keyframes slsFsMessageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:620px){
   .player:fullscreen #slsFullscreenChat,
   .player:-webkit-full-screen #slsFullscreenChat,
   .player.sls-fullscreen-fallback #slsFullscreenChat{
-    right:2%;bottom:5%;width:42%;max-height:70%;padding:6px;gap:5px
+    right:2%;bottom:5%;width:min(38%,220px);max-height:40%;padding:4px;gap:3px
   }
-  .sls-fs-message{font-size:clamp(11px,2.8vw,17px);padding:5px 8px}
+  .sls-fs-message{font-size:clamp(9px,2.1vw,12px);padding:3px 5px;border-radius:7px}
+  .sls-fs-exit{top:8px;left:8px;padding:6px 9px;font-size:10px}
   .sls-fullscreen-btn{top:auto;right:8px;bottom:8px;padding:8px 11px;font-size:11px;z-index:2147483647}
 }
 @media(prefers-reduced-motion:reduce){.sls-fs-message{animation:none}}
@@ -1312,14 +1325,49 @@ header{padding:14px 0}
      RENDER CHAT MESSAGES
   ====================================== */
 
+  const fullscreenOverlaySeen = new Set();
+  const fullscreenOverlayTimers = new Map();
+
+  function clearFullscreenChatOverlay() {
+    const overlay = document.getElementById("slsFullscreenChat");
+    if (overlay) overlay.replaceChildren();
+    fullscreenOverlayTimers.forEach(timer => clearTimeout(timer));
+    fullscreenOverlayTimers.clear();
+    fullscreenOverlaySeen.clear();
+  }
+
+  function prepareFullscreenChatOverlay() {
+    const overlay = document.getElementById("slsFullscreenChat");
+    if (overlay) overlay.replaceChildren();
+    fullscreenOverlayTimers.forEach(timer => clearTimeout(timer));
+    fullscreenOverlayTimers.clear();
+    fullscreenOverlaySeen.clear();
+    // Record the messages already present at the moment fullscreen opens.
+    chatMessages.forEach(message => {
+      if (message.id) fullscreenOverlaySeen.add(message.id);
+    });
+  }
+  window.prepareSlsFullscreenChatOverlay = prepareFullscreenChatOverlay;
+
   function renderFullscreenChatOverlay() {
     const overlay = document.getElementById("slsFullscreenChat");
     if (!overlay) return;
-    overlay.replaceChildren();
-    // Show only the latest 5 messages in the fullscreen overlay.
-    chatMessages.slice(-5).forEach(message => {
+
+    // Never replay old chat on fullscreen entry. Only messages arriving
+    // after entering fullscreen should appear in this temporary overlay.
+    if (!(
+      document.fullscreenElement === document.querySelector(".player") ||
+      document.querySelector(".player")?.classList.contains("sls-fullscreen-fallback")
+    )) return;
+
+    chatMessages.forEach(message => {
+      const id = message.id;
+      if (!id || fullscreenOverlaySeen.has(id)) return;
+      fullscreenOverlaySeen.add(id);
+
       const item = document.createElement("div");
       item.className = "sls-fs-message";
+      item.dataset.messageId = id;
       const name = document.createElement("span");
       name.className = "sls-fs-name";
       name.textContent = `${String(message.name || "Viewer").slice(0, MAX_NAME_LENGTH)}:`;
@@ -1327,6 +1375,24 @@ header{padding:14px 0}
       text.textContent = String(message.text || "").slice(0, MAX_MESSAGE_LENGTH);
       item.append(name, text);
       overlay.appendChild(item);
+
+      // Each comment disappears after 4 seconds, even if nobody else chats.
+      const timer = window.setTimeout(() => {
+        item.remove();
+        fullscreenOverlayTimers.delete(id);
+      }, 4000);
+      fullscreenOverlayTimers.set(id, timer);
+
+      // Keep only a few short-lived messages visible at once.
+      while (overlay.children.length > 4) {
+        const oldest = overlay.firstElementChild;
+        const oldId = oldest?.dataset.messageId;
+        if (oldId && fullscreenOverlayTimers.has(oldId)) {
+          clearTimeout(fullscreenOverlayTimers.get(oldId));
+          fullscreenOverlayTimers.delete(oldId);
+        }
+        oldest?.remove();
+      }
     });
   }
 
@@ -1878,6 +1944,21 @@ header{padding:14px 0}
   fullscreenButton.setAttribute("aria-label", "Open fullscreen video with live chat");
   player.appendChild(fullscreenButton);
 
+  const exitButton = document.createElement("button");
+  exitButton.type = "button";
+  exitButton.className = "sls-fs-exit";
+  exitButton.textContent = "← Exit";
+  exitButton.setAttribute("aria-label", "Exit fullscreen video");
+  player.appendChild(exitButton);
+
+  function clearOverlayOnEntry() {
+    const overlay = document.getElementById("slsFullscreenChat");
+    if (overlay) overlay.replaceChildren();
+    // Mark all currently loaded messages as already seen, so old messages
+    // do not pop up merely because fullscreen was opened.
+    window.slsFullscreenOverlayEntry = true;
+  }
+
   function isCustomFullscreen() {
     return document.fullscreenElement === player ||
       player.classList.contains("sls-fullscreen-fallback");
@@ -1889,6 +1970,15 @@ header{padding:14px 0}
     fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Open fullscreen video with live chat");
   }
 
+  exitButton.addEventListener("click", async () => {
+    if (document.fullscreenElement === player && document.exitFullscreen) {
+      try { await document.exitFullscreen(); } catch (e) {}
+    } else {
+      player.classList.remove("sls-fullscreen-fallback");
+    }
+    syncButton();
+  });
+
   fullscreenButton.addEventListener("click", async () => {
     if (isCustomFullscreen()) {
       if (document.fullscreenElement === player && document.exitFullscreen) {
@@ -1898,6 +1988,13 @@ header{padding:14px 0}
       }
       syncButton();
       return;
+    }
+
+    if (typeof window.prepareSlsFullscreenChatOverlay === "function") {
+      window.prepareSlsFullscreenChatOverlay();
+    } else {
+      const overlay = document.getElementById("slsFullscreenChat");
+      if (overlay) overlay.replaceChildren();
     }
 
     try {
@@ -1915,8 +2012,15 @@ header{padding:14px 0}
     syncButton();
   });
 
-  document.addEventListener("fullscreenchange", syncButton);
-  document.addEventListener("webkitfullscreenchange", syncButton);
+  function handleFullscreenChange() {
+    syncButton();
+    if (!isCustomFullscreen()) {
+      const overlay = document.getElementById("slsFullscreenChat");
+      if (overlay) overlay.replaceChildren();
+    }
+  }
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 })();
 </script>
 

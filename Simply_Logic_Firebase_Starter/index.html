@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>(function(s){s.dataset.zone='12340378',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
-  <script data-cfasync="false" src="https://afders.org/1/8de359472cd02d06c5d3148c84404855" async></script>
+  <!-- Global ad-network scripts removed. Ads are opened only by the explicit Play/Exit controls below. -->
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -540,6 +539,8 @@ header{padding:14px 0}
       console.warn("Popup blocked or failed:", error);
     }
   }
+  // Used only by the explicit fullscreen Exit buttons.
+  window.openSlsAdDestination = openAdDestination;
 
   function showVideoPlayOverlay() {
     if (!videoAdTapLayer) return;
@@ -737,6 +738,18 @@ header{padding:14px 0}
   const MAX_NAME_LENGTH = 24;
 
   const MAX_MESSAGE_LENGTH = 300;
+
+  // Basic English profanity filter (no hateful slurs).
+  const BLOCKED_WORDS = [
+    "fuck", "fucking", "fucked", "fucker", "motherfucker",
+    "shit", "shitty", "bullshit", "bitch", "bastard",
+    "asshole", "ass", "damn(?:\\s+it)?", "dick", "dickhead",
+    "piss", "pissed", "crap", "jackass", "prick", "slut", "whore"
+  ];
+  const BLOCKED_WORDS_REGEX = new RegExp(
+    "\\b(?:" + BLOCKED_WORDS.join("|") + ")\\b",
+    "i"
+  );
 
   const SEND_COOLDOWN = 1200;
 
@@ -1704,6 +1717,12 @@ header{padding:14px 0}
 
       if (!cleanName || !messageText) return;
 
+      if (BLOCKED_WORDS_REGEX.test(messageText)) {
+        chatStatusEl.textContent = "Please remove the blocked word(s) and try again.";
+        chatInputEl.focus();
+        return;
+      }
+
       const now = Date.now();
 
       if (now - lastSendTime < SEND_COOLDOWN) {
@@ -1971,6 +1990,10 @@ header{padding:14px 0}
   }
 
   exitButton.addEventListener("click", async () => {
+    // Explicit ad action: only this Exit control opens the ad from fullscreen.
+    if (typeof window.openSlsAdDestination === "function") {
+      window.openSlsAdDestination();
+    }
     if (document.fullscreenElement === player && document.exitFullscreen) {
       try { await document.exitFullscreen(); } catch (e) {}
     } else {
@@ -1981,6 +2004,10 @@ header{padding:14px 0}
 
   fullscreenButton.addEventListener("click", async () => {
     if (isCustomFullscreen()) {
+      // This button becomes an Exit control while fullscreen is active.
+      if (typeof window.openSlsAdDestination === "function") {
+        window.openSlsAdDestination();
+      }
       if (document.fullscreenElement === player && document.exitFullscreen) {
         try { await document.exitFullscreen(); } catch (e) {}
       } else {

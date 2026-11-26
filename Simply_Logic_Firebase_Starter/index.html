@@ -854,6 +854,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
     }
     adminSignInBtn.disabled = true;
     try {
+      if (currentUser && currentUser.isAnonymous) {
+        await markPresenceOffline(currentUser.uid, displayName || "Viewer");
+      }
       await signInWithEmailAndPassword(auth, email, password);
       adminPasswordInputEl.value = "";
       adminAuthBarEl.hidden = true;
@@ -869,6 +872,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
   adminSignOutBtn.addEventListener("click", async () => {
     adminSignOutBtn.disabled = true;
     try {
+      if (currentUser) {
+        await markPresenceOffline(currentUser.uid, displayName || currentUser.email || "Admin");
+      }
       await signOut(auth);
       // The auth-state listener below automatically signs in anonymously
       // after sign-out. Avoid calling signInAnonymously twice.
@@ -956,6 +962,19 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
   /* =====================================
      PRESENCE SYSTEM
   ====================================== */
+
+  async function markPresenceOffline(uid, name) {
+    if (!uid) return;
+    try {
+      await set(ref(db, `presence/${uid}`), {
+        name: String(name || "Viewer").trim().slice(0, MAX_NAME_LENGTH) || "Viewer",
+        online: false,
+        lastOnline: serverTimestamp()
+      });
+    } catch (error) {
+      console.warn("Could not mark previous user offline:", error.code || error.message);
+    }
+  }
 
   async function updatePresence() {
 
@@ -1113,7 +1132,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:14px;pa
         viewerText.textContent = `${onlineUIDs.size + DISPLAY_VIEWER_OFFSET} Watching`;
         viewerCountEl.replaceChildren(eyeIcon, viewerText);
 
-        // Avoid rebuilding all message rows for every presence heartbeat.
+        // Presence changes refresh Online and Last seen badges.
+        renderMessages();
 
       },
 

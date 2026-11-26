@@ -119,6 +119,57 @@ header{padding:14px 0}
     scroll-margin-bottom:12px;
   }
 }
+
+/* Custom fullscreen player with live chat overlay */
+.player.sls-fullscreen-fallback{
+  position:fixed!important;inset:0!important;z-index:100000!important;
+  width:100vw!important;height:100dvh!important;max-width:none!important;
+  aspect-ratio:auto!important;border-radius:0!important;background:#000!important;
+}
+.player:fullscreen,.player:-webkit-full-screen{
+  width:100vw!important;height:100vh!important;height:100dvh!important;
+  aspect-ratio:auto!important;background:#000!important;
+}
+.player:fullscreen iframe,.player:-webkit-full-screen iframe,
+.player.sls-fullscreen-fallback iframe{width:100%!important;height:100%!important}
+.sls-fullscreen-btn{
+  /* Place our control over the embedded player's own fullscreen control. */
+  position:absolute;z-index:2147483647;top:auto;right:10px;bottom:10px;
+  border:1px solid #ffffff88;border-radius:999px;padding:9px 13px;
+  color:#fff;background:#111827f2;font-size:12px;font-weight:900;
+  backdrop-filter:blur(8px);cursor:pointer;pointer-events:auto;
+  touch-action:manipulation
+}
+#slsFullscreenChat{
+  display:none;position:absolute;z-index:25;right:2.5%;bottom:7%;
+  width:min(36%,420px);max-height:72%;overflow:hidden;
+  flex-direction:column;justify-content:flex-end;gap:8px;
+  padding:12px;pointer-events:none;
+  mask-image:linear-gradient(to bottom,transparent 0%,black 16%);
+}
+.player:fullscreen #slsFullscreenChat,
+.player:-webkit-full-screen #slsFullscreenChat,
+.player.sls-fullscreen-fallback #slsFullscreenChat{display:flex}
+.sls-fs-message{
+  align-self:flex-end;max-width:100%;padding:7px 11px;
+  border-radius:13px;background:rgba(8,12,22,.66);
+  color:#fff;font-size:clamp(12px,1.8vw,20px);line-height:1.3;
+  overflow-wrap:anywhere;text-shadow:0 1px 2px #000;
+  animation:slsFsMessageIn .22s ease-out both
+}
+.sls-fs-name{color:#facc15;font-weight:900;margin-right:5px}
+@keyframes slsFsMessageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:620px){
+  .player:fullscreen #slsFullscreenChat,
+  .player:-webkit-full-screen #slsFullscreenChat,
+  .player.sls-fullscreen-fallback #slsFullscreenChat{
+    right:2%;bottom:5%;width:42%;max-height:70%;padding:6px;gap:5px
+  }
+  .sls-fs-message{font-size:clamp(11px,2.8vw,17px);padding:5px 8px}
+  .sls-fullscreen-btn{top:auto;right:8px;bottom:8px;padding:8px 11px;font-size:11px;z-index:2147483647}
+}
+@media(prefers-reduced-motion:reduce){.sls-fs-message{animation:none}}
+
 </style>
 </head>
 
@@ -210,6 +261,8 @@ header{padding:14px 0}
           allowfullscreen
           referrerpolicy="strict-origin-when-cross-origin">
         </iframe>
+
+        <div id="slsFullscreenChat" aria-live="polite" aria-label="Live chat messages during fullscreen"></div>
 
       </div>
 
@@ -1259,6 +1312,24 @@ header{padding:14px 0}
      RENDER CHAT MESSAGES
   ====================================== */
 
+  function renderFullscreenChatOverlay() {
+    const overlay = document.getElementById("slsFullscreenChat");
+    if (!overlay) return;
+    overlay.replaceChildren();
+    // Show only the latest 5 messages in the fullscreen overlay.
+    chatMessages.slice(-5).forEach(message => {
+      const item = document.createElement("div");
+      item.className = "sls-fs-message";
+      const name = document.createElement("span");
+      name.className = "sls-fs-name";
+      name.textContent = `${String(message.name || "Viewer").slice(0, MAX_NAME_LENGTH)}:`;
+      const text = document.createElement("span");
+      text.textContent = String(message.text || "").slice(0, MAX_MESSAGE_LENGTH);
+      item.append(name, text);
+      overlay.appendChild(item);
+    });
+  }
+
   function renderMessages() {
 
     const wasNearBottom = shouldAutoScroll;
@@ -1425,6 +1496,7 @@ header{padding:14px 0}
 
     }
 
+    renderFullscreenChatOverlay();
   }
 
 
@@ -1790,6 +1862,61 @@ header{padding:14px 0}
       if (document.activeElement !== input) restoreVideoCard();
     }, 180);
   });
+})();
+</script>
+
+<script>
+/* Custom fullscreen keeps the site chat overlay above the embedded stream. */
+(() => {
+  const player = document.querySelector(".player");
+  if (!player) return;
+
+  const fullscreenButton = document.createElement("button");
+  fullscreenButton.type = "button";
+  fullscreenButton.className = "sls-fullscreen-btn";
+  fullscreenButton.textContent = "⛶ Fullscreen + Chat";
+  fullscreenButton.setAttribute("aria-label", "Open fullscreen video with live chat");
+  player.appendChild(fullscreenButton);
+
+  function isCustomFullscreen() {
+    return document.fullscreenElement === player ||
+      player.classList.contains("sls-fullscreen-fallback");
+  }
+
+  function syncButton() {
+    const active = isCustomFullscreen();
+    fullscreenButton.textContent = active ? "✕ Exit fullscreen" : "⛶ Fullscreen + Chat";
+    fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Open fullscreen video with live chat");
+  }
+
+  fullscreenButton.addEventListener("click", async () => {
+    if (isCustomFullscreen()) {
+      if (document.fullscreenElement === player && document.exitFullscreen) {
+        try { await document.exitFullscreen(); } catch (e) {}
+      } else {
+        player.classList.remove("sls-fullscreen-fallback");
+      }
+      syncButton();
+      return;
+    }
+
+    try {
+      if (player.requestFullscreen) {
+        await player.requestFullscreen();
+      } else if (player.webkitRequestFullscreen) {
+        player.webkitRequestFullscreen();
+      } else {
+        // CSS fullscreen fallback for browsers that do not support element fullscreen.
+        player.classList.add("sls-fullscreen-fallback");
+      }
+    } catch (error) {
+      player.classList.add("sls-fullscreen-fallback");
+    }
+    syncButton();
+  });
+
+  document.addEventListener("fullscreenchange", syncButton);
+  document.addEventListener("webkitfullscreenchange", syncButton);
 })();
 </script>
 

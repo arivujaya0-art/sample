@@ -2,11 +2,12 @@
   "rules": {
     "messages": {
       ".read": "auth != null",
-      ".indexOn": ["createdAt"],
+      ".indexOn": [
+        "createdAt"
+      ],
       "$messageId": {
         ".write": "auth != null && ((auth.uid === 'LW00AuX32AVZi6d4E6pfbDrmCYH2' && (!newData.exists() || newData.child('uid').val() === auth.uid)) || (!data.exists() && newData.child('uid').val() === auth.uid && root.child('blockedUsers').child(auth.uid).val() !== true))",
-        ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','text','createdAt']) && newData.child('uid').isString() && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 24 && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 300 && newData.child('createdAt').isNumber())",
-        "$other": { ".validate": "false" }
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','text','createdAt']) && newData.child('uid').isString() && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 24 && newData.child('text').isString() && newData.child('text').val().length >= 1 && newData.child('text').val().length <= 300 && newData.child('createdAt').isNumber())"
       }
     },
     "presence": {
@@ -14,13 +15,17 @@
       "$uid": {
         ".write": "auth != null && (auth.uid === $uid || auth.uid === 'LW00AuX32AVZi6d4E6pfbDrmCYH2')",
         ".validate": "!newData.exists() || (newData.hasChildren(['name','online','lastOnline']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 24 && newData.child('online').isBoolean() && newData.child('lastOnline').isNumber())",
-        "$other": { ".validate": "false" }
+        "$other": {
+          ".validate": "false"
+        }
       }
     },
     "blockedUsers": {
       ".read": "auth != null",
       ".write": "auth != null && auth.uid === 'LW00AuX32AVZi6d4E6pfbDrmCYH2'",
-      "$uid": { ".validate": "newData.isBoolean()" }
+      "$uid": {
+        ".validate": "newData.isBoolean()"
+      }
     }
   }
 }

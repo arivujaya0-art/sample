@@ -75,6 +75,34 @@ header{padding:14px 0}
    Firebase/chat structure. The video card becomes a small fixed mini-player
    only while the chat input is focused. */
 @media(max-width:620px){
+  body.mobile-chat-typing .card.mobile-live-video-mini,
+  .card.mobile-live-video-mini{
+    position:fixed !important;
+    top:0 !important;
+    left:0 !important;
+    right:0 !important;
+    width:100vw !important;
+    max-width:none !important;
+    z-index:99999 !important;
+    margin:0 !important;
+    padding:6px 8px !important;
+    border-radius:0 0 14px 14px !important;
+    background:var(--panel) !important;
+    box-shadow:0 8px 24px rgba(0,0,0,.22) !important;
+  }
+  body.mobile-chat-typing .card.mobile-live-video-mini .section-heading{
+    padding:5px 8px !important;
+  }
+  body.mobile-chat-typing .card.mobile-live-video-mini .player{
+    height:clamp(76px,16dvh,108px) !important;
+    aspect-ratio:auto !important;
+  }
+  body.mobile-chat-typing .card.mobile-live-video-mini #videoAdTapLayer{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
   body.mobile-chat-typing .card[aria-label="Live video player"]{
     position:fixed;
     top:0;
@@ -1636,6 +1664,9 @@ header{padding:14px 0}
           window.matchMedia("(max-width: 620px)").matches
         ) {
           document.body.classList.remove("mobile-chat-typing");
+          if (typeof window.restoreLiveVideoCard === "function") {
+            window.restoreLiveVideoCard();
+          }
           const videoSection = document.querySelector(
             '.card[aria-label="Live video player"]'
           );
@@ -1757,26 +1788,48 @@ header{padding:14px 0}
 
 
 <script>
-/* Mobile-only compact video while the user is typing in live chat. */
+/* Mobile mini-player: move the video card out of the page container while
+   typing, so fixed positioning is not affected by parent layout/scrolling. */
 (() => {
   const input = document.getElementById("chatInput");
-  if (!input) return;
+  const videoSection = document.querySelector('.card[aria-label="Live video player"]');
+  if (!input || !videoSection) return;
+
   const className = "mobile-chat-typing";
+  const miniClass = "mobile-live-video-mini";
+  const placeholder = document.createComment("live video original position");
+  let moved = false;
 
-  input.addEventListener("focus", () => {
-    if (window.matchMedia("(max-width: 620px)").matches) {
-      document.body.classList.add(className);
+  function moveVideoToMiniPlayer() {
+    if (!window.matchMedia("(max-width: 620px)").matches) return;
+    if (!moved && videoSection.parentNode) {
+      videoSection.parentNode.insertBefore(placeholder, videoSection);
+      document.body.appendChild(videoSection);
+      moved = true;
     }
-  });
+    videoSection.classList.add(miniClass);
+    document.body.classList.add(className);
+  }
 
+  function restoreVideoCard() {
+    document.body.classList.remove(className);
+    videoSection.classList.remove(miniClass);
+    if (moved && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(videoSection, placeholder);
+      placeholder.remove();
+      moved = false;
+    }
+  }
+
+  window.restoreLiveVideoCard = restoreVideoCard;
+
+  input.addEventListener("focus", moveVideoToMiniPlayer);
+  input.addEventListener("touchstart", moveVideoToMiniPlayer, {passive:true});
   input.addEventListener("blur", () => {
     window.setTimeout(() => {
-      if (document.activeElement !== input) {
-        document.body.classList.remove(className);
-      }
-    }, 150);
+      if (document.activeElement !== input) restoreVideoCard();
+    }, 180);
   });
-
 })();
 </script>
 

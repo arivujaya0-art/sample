@@ -71,12 +71,10 @@ header{padding:14px 0}
 .reaction-btn{width:39px;height:39px}
 }
 
-/* Mobile typing mode: keep a compact video visible without changing the
-   Firebase/chat structure. The video card becomes a small fixed mini-player
-   only while the chat input is focused. */
+/* Mobile typing mode: keep the SAME iframe in place. Only CSS changes its
+   position and size, preventing the embedded stream from reloading on focus. */
 @media(max-width:620px){
-  body.mobile-chat-typing .card.mobile-live-video-mini,
-  .card.mobile-live-video-mini{
+  body.mobile-chat-typing .card[aria-label="Live video player"]{
     position:fixed !important;
     top:0 !important;
     left:0 !important;
@@ -85,62 +83,39 @@ header{padding:14px 0}
     max-width:none !important;
     z-index:99999 !important;
     margin:0 !important;
-    padding:6px 8px !important;
-    border-radius:0 0 14px 14px !important;
+    padding:6px 8px 8px !important;
+    border-radius:0 0 16px 16px !important;
     background:var(--panel) !important;
-    box-shadow:0 8px 24px rgba(0,0,0,.22) !important;
-  }
-  body.mobile-chat-typing .card.mobile-live-video-mini .section-heading{
-    padding:5px 8px !important;
-  }
-  body.mobile-chat-typing .card.mobile-live-video-mini .player{
-    height:clamp(76px,16dvh,108px) !important;
-    aspect-ratio:auto !important;
-  }
-  body.mobile-chat-typing .card.mobile-live-video-mini #videoAdTapLayer{
-    display:none !important;
-    visibility:hidden !important;
-    opacity:0 !important;
-    pointer-events:none !important;
-  }
-  body.mobile-chat-typing .card[aria-label="Live video player"]{
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    z-index:100;
-    margin:0;
-    padding:6px 8px;
-    border-radius:0 0 14px 14px;
-    background:var(--panel);
-    box-shadow:0 8px 24px rgba(0,0,0,.22);
+    box-shadow:0 8px 24px rgba(0,0,0,.24) !important;
   }
   body.mobile-chat-typing .card[aria-label="Live video player"] .section-heading{
-    padding:5px 8px;
+    padding:5px 8px !important;
   }
   body.mobile-chat-typing .card[aria-label="Live video player"] .section-heading h2{
-    font-size:13px;
+    font-size:14px !important;
   }
   body.mobile-chat-typing .card[aria-label="Live video player"] .live-pill{
-    padding:4px 7px;
-    font-size:9px;
+    padding:4px 7px !important;
+    font-size:10px !important;
   }
+  /* Larger, full-width player while the keyboard is open. */
   body.mobile-chat-typing .card[aria-label="Live video player"] .player{
-    height:clamp(76px,16dvh,108px);
-    aspect-ratio:auto;
+    height:clamp(150px,27dvh,230px) !important;
+    aspect-ratio:auto !important;
   }
-  /* Keep the live iframe visible, but hide the ad/play prompt in the mini-player. */
-  body.mobile-chat-typing #videoAdTapLayer{
+  /* Hide only the tap/ad layer during typing; never touch the iframe. */
+  body.mobile-chat-typing #videoAdTapLayer,
+  body.mobile-chat-typing .video-ad-tap-layer{
     display:none !important;
     visibility:hidden !important;
     opacity:0 !important;
     pointer-events:none !important;
   }
   body.mobile-chat-typing .chat-messages{
-    height:110px;
+    height:110px !important;
   }
   body.mobile-chat-typing .chat-input{
-    scroll-margin-top:130px;
+    scroll-margin-top:250px;
     scroll-margin-bottom:12px;
   }
 }
@@ -1788,43 +1763,28 @@ header{padding:14px 0}
 
 
 <script>
-/* Mobile mini-player: move the video card out of the page container while
-   typing, so fixed positioning is not affected by parent layout/scrolling. */
+/* Mobile mini-player: DO NOT move/reparent the video card or iframe.
+   Reparenting an iframe can reload the stream and bring back the Play button.
+   CSS fixed positioning keeps the exact same playing iframe alive. */
 (() => {
   const input = document.getElementById("chatInput");
   const videoSection = document.querySelector('.card[aria-label="Live video player"]');
   if (!input || !videoSection) return;
 
   const className = "mobile-chat-typing";
-  const miniClass = "mobile-live-video-mini";
-  const placeholder = document.createComment("live video original position");
-  let moved = false;
 
-  function moveVideoToMiniPlayer() {
+  function showVideoWhileTyping() {
     if (!window.matchMedia("(max-width: 620px)").matches) return;
-    if (!moved && videoSection.parentNode) {
-      videoSection.parentNode.insertBefore(placeholder, videoSection);
-      document.body.appendChild(videoSection);
-      moved = true;
-    }
-    videoSection.classList.add(miniClass);
     document.body.classList.add(className);
   }
 
   function restoreVideoCard() {
     document.body.classList.remove(className);
-    videoSection.classList.remove(miniClass);
-    if (moved && placeholder.parentNode) {
-      placeholder.parentNode.insertBefore(videoSection, placeholder);
-      placeholder.remove();
-      moved = false;
-    }
   }
 
   window.restoreLiveVideoCard = restoreVideoCard;
-
-  input.addEventListener("focus", moveVideoToMiniPlayer);
-  input.addEventListener("touchstart", moveVideoToMiniPlayer, {passive:true});
+  input.addEventListener("focus", showVideoWhileTyping);
+  input.addEventListener("touchstart", showVideoWhileTyping, {passive:true});
   input.addEventListener("blur", () => {
     window.setTimeout(() => {
       if (document.activeElement !== input) restoreVideoCard();

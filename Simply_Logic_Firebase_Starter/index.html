@@ -101,6 +101,13 @@ header{padding:14px 0}
     height:clamp(76px,16dvh,108px);
     aspect-ratio:auto;
   }
+  /* Keep the live iframe visible, but hide the ad/play prompt in the mini-player. */
+  body.mobile-chat-typing #videoAdTapLayer{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
   body.mobile-chat-typing .chat-messages{
     height:110px;
   }
@@ -1616,8 +1623,30 @@ header{padding:14px 0}
 
         sendBtn.disabled = !canChat;
 
-        if (canChat) {
+        // On mobile, don't refocus the input after Send: that reopens the
+        // keyboard and keeps the page parked at the chat box.
+        if (canChat && !window.matchMedia("(max-width: 620px)").matches) {
           chatInputEl.focus();
+        }
+
+        // After a successful mobile send, restore normal video layout and
+        // scroll the video back into view so it is easy to watch.
+        if (
+          chatStatusEl.textContent === "Message sent successfully." &&
+          window.matchMedia("(max-width: 620px)").matches
+        ) {
+          document.body.classList.remove("mobile-chat-typing");
+          const videoSection = document.querySelector(
+            '.card[aria-label="Live video player"]'
+          );
+          if (videoSection) {
+            window.setTimeout(() => {
+              videoSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+            }, 120);
+          }
         }
 
       }
@@ -1747,22 +1776,7 @@ header{padding:14px 0}
       }
     }, 150);
   });
-})();
-</script>
 
-
-<script>
-/* After Send, restore the normal video layout immediately.
-   The mini-player returns only when the user taps the input again. */
-(() => {
-  const form = document.getElementById("chatForm");
-  const input = document.getElementById("chatInput");
-  if (!form) return;
-
-  form.addEventListener("submit", () => {
-    document.body.classList.remove("mobile-chat-typing");
-    if (input) input.blur();
-  }, true);
 })();
 </script>
 

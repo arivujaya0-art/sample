@@ -679,59 +679,361 @@ header{padding:14px 0}
   ====================================== -->
 
   <script type="module">
-
-  import { initializeApp }
-    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-  import {
-    getAuth,
-    signInAnonymously,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  import {
-    getDatabase,
-    get,
-    ref,
-    set,
-    push,
-    remove,
-    onValue,
-    onDisconnect,
-    serverTimestamp,
-    query,
-    limitToLast
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+  import { createClient }
+    from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
   /* =====================================
-     FIREBASE + ADMIN CONFIGURATION
+     SUPABASE CONFIGURATION
+     Paste your Project URL and Publishable key below.
+     Never put a Supabase secret/service-role key in this file.
   ====================================== */
-
-  // Paste the config object from your NEW Firebase project's Web App settings.
-  // Do not leave placeholder values when deploying.
- const firebaseConfig = {
-  apiKey: "AIzaSyD5WwwVqpucBHRJ6wmaNf3KQH-Ui1pdXiY",
-  authDomain: "simply-logic-studios-new.firebaseapp.com",
-  databaseURL: "https://simply-logic-studios-new-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "simply-logic-studios-new",
-  storageBucket: "simply-logic-studios-new.firebasestorage.app",
-  messagingSenderId: "829381699692",
-  appId: "1:829381699692:web:95cabf757772b9969cd049",
-  measurementId: "G-9W19RB7VML"
-};
-
-  // After creating your admin email/password account, copy its UID from
-  // Firebase Authentication -> Users and replace this placeholder.
-  const ADMIN_UID = "LW00AuX32AVZi6d4E6pfbDrmCYH2";
+  const SUPABASE_URL = "https://vurkpzeekgfvbtzukcfe.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_lTcKMYP2ANLpQu0aT5SLQA_iSXFPNK5";
+  // Set this to the Supabase Auth user UUID added to public.chat_admins.
+  const ADMIN_UID = "322ae958-25ff-4acc-9900-46c9dc60189b";
   const DISPLAY_VIEWER_OFFSET = 1000;
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  const auth = supabase.auth;
+  const db = supabase;
+
+  /* Firebase-compatible adapter for the existing chat UI.
+     The UI below is retained; its database operations now use Supabase. */
+  const ref = (_db, path) => ({ path: String(path || "") });
+  const limitToLast = count => ({ limit: Number(count) || 30 });
+  const query = (base, ...constraints) => ({
+    path: base.path,
+    limit: constraints.find(item => item && Number.isFinite(item.limit))?.limit || 30
+  });
+  const serverTimestamp = () => new Date().toISOString();
+
+  function makeSnapshot(value) {
+    return {
+      val: () => value,
+      forEach(callback) {
+        if (!value || typeof value !== "object") return false;
+        for (const [key, childValue] of Object.entries(value)) {
+          const stop = callback({ key, val: () => childValue });
+          if (stop === true) return true;
+        }
+        return false;
+      }
+    };
+  }
+
+  function normalizeSupabaseUser(user) {
+    if (!user) return null;
+    return {
+      ...user,
+      uid: user.id,
+      isAnonymous: Boolean(user.is_anonymous || user.app_metadata?.provider === "anonymous")
+    };
+  }
+
+  function signInAnonymously(authClient) {
+    return authClient.signInAnonymously();
+  }
+  function signInWithEmailAndPassword(authClient, email, password) {
+    return authClient.signInWithPassword({ email, password });
+  }
+  function signOut(authClient) {
+    return authClient.signOut();
+  }
+
+  function onAuthStateChanged(authClient, callback, errorCallback) {
+    let lastIdentity = Symbol("initial");
+    const dispatch = user => {
+      const normalized = normalizeSupabaseUser(user);
+      const identity = normalized ? normalized.uid : null;
+      if (identity === lastIdentity) return;
+      lastIdentity = identity;
+      callback(normalized);
+    };
+    const { data: { subscription } } = authClient.onAuthStateChange((_event, session) => {
+      // Defer work so Supabase's auth callback is not blocked by other auth calls.
+      queueMicrotask(() => dispatch(session?.user || null));
+    });
+    authClient.getSession().then(({ data, error }) => {
+      if (error) errorCallback?.(error);
+      else dispatch(data.session?.user || null);
+    }).catch(error => errorCallback?.(error));
+    return () => subscription.unsubscribe();
+  }
+
+  function toMillis(value) {
+    if (typeof value === "number") return value;
+    const parsed = Date.parse(value || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function rowsToMessages(rows) {
+    const value = {};
+    for (const row of rows || []) {
+      value[String(row.id)] = {
+        uid: row.uid,
+        name: row.name,
+        text: row.text,
+        createdAt: toMillis(row.created_at)
+      };
+    }
+    return value;
+  }
+
+  async function loadPath(path, maxRows) {
+    if (path === "messages") {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("id,uid,name,text,created_at")
+        .order("created_at", { ascending: false })
+        .limit(maxRows || 30);
+      if (error) throw error;
+      return rowsToMessages((data || []).reverse());
+    }
+    if (path === "blockedUsers") {
+      const { data, error } = await supabase
+        .from("blocked_users")
+        .select("user_id,blocked");
+      if (error) throw error;
+      const value = {};
+      for (const row of data || []) value[row.user_id] = row.blocked === true;
+      return value;
+    }
+    if (path === "presence") {
+      const { data, error } = await supabase
+        .from("presence")
+        .select("user_id,name,online,last_online");
+      if (error) throw error;
+      const value = {};
+      for (const row of data || []) {
+        value[row.user_id] = {
+          name: row.name || "Viewer",
+          online: row.online === true,
+          lastOnline: toMillis(row.last_online)
+        };
+      }
+      return value;
+    }
+    throw new Error(`Unsupported Supabase chat path: ${path}`);
+  }
+
+  let presenceChannel = null;
+  let presenceReady = false;
+  let presenceStored = {};
+  let presenceSnapshotCallback = null;
+
+  function emitPresenceSnapshot() {
+    if (!presenceSnapshotCallback) return;
+    const value = { ...presenceStored };
+    const state = presenceChannel?.presenceState?.() || {};
+    for (const [uid, sessions] of Object.entries(state)) {
+      const session = Array.isArray(sessions) ? sessions[0] : sessions;
+      const old = value[uid] || {};
+      value[uid] = {
+        ...old,
+        name: session?.name || old.name || "Viewer",
+        online: true,
+        lastOnline: old.lastOnline || Date.now()
+      };
+    }
+    for (const [uid, user] of Object.entries(value)) {
+      if (!Object.prototype.hasOwnProperty.call(state, uid)) user.online = false;
+    }
+    presenceSnapshotCallback(makeSnapshot(value));
+  }
+
+  function ensurePresenceChannel() {
+    if (presenceChannel) return presenceChannel;
+    const channelKey = currentUser?.uid || `viewer-${Math.random().toString(36).slice(2)}`;
+    presenceChannel = supabase.channel("sls-chat-presence", {
+      config: { presence: { key: channelKey } }
+    });
+    presenceChannel.on("presence", { event: "sync" }, emitPresenceSnapshot);
+    presenceChannel.subscribe(status => {
+      if (status === "SUBSCRIBED") {
+        presenceReady = true;
+        if (currentUser) {
+          presenceChannel.track({
+            uid: currentUser.uid,
+            name: displayName || "Viewer",
+            online: true,
+            lastOnline: Date.now()
+          }).catch(error => console.warn("Supabase presence track failed:", error));
+        }
+        emitPresenceSnapshot();
+      } else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        presenceReady = false;
+      }
+    });
+    return presenceChannel;
+  }
+
+  function onValue(reference, callback, errorCallback) {
+    const path = reference.path;
+    if (path === ".info/connected") {
+      const channel = supabase.channel(`sls-connection-${Math.random().toString(36).slice(2)}`);
+      channel.subscribe(status => {
+        if (status === "SUBSCRIBED") callback(makeSnapshot(true));
+        else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) callback(makeSnapshot(false));
+      });
+      return () => supabase.removeChannel(channel);
+    }
+
+    if (path === "presence") {
+      presenceSnapshotCallback = callback;
+      ensurePresenceChannel();
+    }
+
+    const table = path === "messages" ? "messages"
+      : path === "blockedUsers" ? "blocked_users"
+      : path === "presence" ? "presence" : null;
+    if (!table) {
+      errorCallback?.(new Error(`Unsupported Supabase listener path: ${path}`));
+      return () => {};
+    }
+
+    let closed = false;
+    let refreshQueued = false;
+    const refresh = async () => {
+      if (closed || refreshQueued) return;
+      refreshQueued = true;
+      try {
+        const value = await loadPath(path, reference.limit || 30);
+        if (closed) return;
+        if (path === "presence") {
+          presenceStored = value;
+          emitPresenceSnapshot();
+        } else {
+          callback(makeSnapshot(value));
+        }
+      } catch (error) {
+        console.error(`Supabase ${path} listener error:`, error);
+        errorCallback?.(error);
+      } finally {
+        refreshQueued = false;
+      }
+    };
+
+    const channel = supabase.channel(`sls-${table}-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table }, refresh)
+      .subscribe(status => {
+        if (status === "SUBSCRIBED") refresh();
+        else if (["CHANNEL_ERROR", "TIMED_OUT"].includes(status)) {
+          errorCallback?.(new Error(`Supabase Realtime status: ${status}`));
+        }
+      });
+
+    return () => {
+      closed = true;
+      if (path === "presence") presenceSnapshotCallback = null;
+      supabase.removeChannel(channel);
+    };
+  }
+
+  async function get(reference) {
+    const value = await loadPath(reference.path, reference.limit || 31);
+    return makeSnapshot(value);
+  }
+
+  async function push(reference, message) {
+    if (reference.path !== "messages") throw new Error("Messages can only be inserted into messages.");
+    const row = {
+      uid: message.uid,
+      name: String(message.name || "Viewer").slice(0, 24),
+      text: String(message.text || "").slice(0, 300),
+      created_at: message.createdAt || new Date().toISOString()
+    };
+    const { data, error } = await supabase.from("messages").insert(row).select("id").single();
+    if (error) throw error;
+    return { key: data.id };
+  }
+
+  async function set(reference, value) {
+    const parts = reference.path.split("/");
+    const collection = parts[0];
+    const uid = parts[1];
+    if (collection === "presence" && uid) {
+      const { error } = await supabase.from("presence").upsert({
+        user_id: uid,
+        name: String(value.name || "Viewer").slice(0, 24),
+        online: value.online === true,
+        last_online: value.lastOnline || new Date().toISOString()
+      }, { onConflict: "user_id" });
+      if (error) throw error;
+      if (value.online === true && currentUser && currentUser.uid === uid) {
+        const channel = ensurePresenceChannel();
+        if (presenceReady) {
+          await channel.track({ uid, name: String(value.name || "Viewer").slice(0, 24), online: true, lastOnline: Date.now() });
+        }
+      }
+      return;
+    }
+    if (collection === "blockedUsers" && uid) {
+      const { error } = await supabase.from("blocked_users").upsert({
+        user_id: uid,
+        blocked: value === true
+      }, { onConflict: "user_id" });
+      if (error) throw error;
+      return;
+    }
+    throw new Error(`Unsupported Supabase write path: ${reference.path}`);
+  }
+
+  async function remove(reference) {
+    const parts = reference.path.split("/");
+    const collection = parts[0];
+    const key = parts[1];
+    let result;
+    if (collection === "messages" && key) {
+      result = await supabase.from("messages").delete().eq("id", Number(key));
+    } else if (collection === "blockedUsers" && key) {
+      result = await supabase.from("blocked_users").delete().eq("user_id", key);
+    } else if (collection === "presence" && key) {
+      result = await supabase.from("presence").delete().eq("user_id", key);
+    } else {
+      throw new Error(`Unsupported Supabase delete path: ${reference.path}`);
+    }
+    if (result.error) throw result.error;
+  }
+
+  function onDisconnect(reference) {
+    return {
+      async set(value) {
+        const uid = reference.path.split("/")[1];
+        const handler = async () => {
+          try {
+            if (presenceChannel) await presenceChannel.untrack();
+            const { data: { session } } = await auth.getSession();
+            if (!session?.access_token || !uid) return;
+            fetch(`${SUPABASE_URL}/rest/v1/presence?user_id=eq.${encodeURIComponent(uid)}`, {
+              method: "PATCH",
+              keepalive: true,
+              headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal"
+              },
+              body: JSON.stringify({
+                name: String(value.name || "Viewer").slice(0, 24),
+                online: false,
+                last_online: new Date().toISOString()
+              })
+            }).catch(() => {});
+          } catch (error) {
+            console.warn("Presence disconnect update skipped:", error);
+          }
+        };
+        window.addEventListener("pagehide", handler, { once: true });
+      }
+    };
+  }
 
   /* =====================================
      SETTINGS
   ====================================== */
+
 
   const MAX_MESSAGES = 30; // only the newest 30 are fetched and displayed
 
@@ -760,11 +1062,13 @@ header{padding:14px 0}
      INITIALIZATION
   ====================================== */
 
-  const app = initializeApp(firebaseConfig);
+  // Supabase client and Firebase-compatible adapter are initialized above.
+  // The existing chat UI below uses these adapter functions.
+  const authClient = auth;
+  if (SUPABASE_URL.includes("PASTE_") || SUPABASE_PUBLISHABLE_KEY.includes("PASTE_")) {
+    console.warn("Set your Supabase Project URL and Publishable key before deploying.");
+  }
 
-  const auth = getAuth(app);
-
-  const db = getDatabase(app);
 
 
   /* HTML ELEMENTS */
@@ -821,11 +1125,6 @@ header{padding:14px 0}
   let presenceStarted = false;
 
   let listenersStarted = false;
-
-  // Message listener can be restarted independently if RTDB reconnects.
-  let messageListenerUnsubscribe = null;
-  let messageListenerLoaded = false;
-  let messageListenerFailed = false;
 
   let authFailed = false;
 
@@ -1225,27 +1524,11 @@ header{padding:14px 0}
 
       async snapshot => {
 
-        const wasConnected = presenceConnected;
         presenceConnected = snapshot.val() === true;
 
-        if (!presenceConnected) {
-          chatStatusEl.textContent = "Live chat connection lost. Reconnecting...";
-          return;
-        }
+        if (!presenceConnected) return;
 
         await updatePresence();
-
-        // Firebase normally reconnects listeners automatically. If the message
-        // listener was cancelled or had not completed its first sync, restart it
-        // once the database connection comes back.
-        if (
-          wasConnected === false &&
-          listenersStarted &&
-          (!messageListenerLoaded || messageListenerFailed)
-        ) {
-          console.info("Realtime Database reconnected; restarting message listener.");
-          startMessageListener();
-        }
 
       },
 
@@ -1645,58 +1928,64 @@ header{padding:14px 0}
 
   function startMessageListener() {
 
-    // Detach a previous listener before starting another one.
-    if (typeof messageListenerUnsubscribe === "function") {
-      messageListenerUnsubscribe();
-      messageListenerUnsubscribe = null;
-    }
-
-    messageListenerLoaded = false;
-    messageListenerFailed = false;
-    chatStatusEl.textContent = presenceConnected
-      ? "Connected to Firebase. Loading messages..."
-      : "Connecting to Firebase Realtime Database...";
-
     const messagesQuery = query(
+
       ref(db, "messages"),
+
       limitToLast(MAX_MESSAGES)
+
     );
 
-    messageListenerUnsubscribe = onValue(
+    onValue(
+
       messagesQuery,
+
       snapshot => {
-        messageListenerLoaded = true;
-        messageListenerFailed = false;
 
         chatMessages = [];
+
         snapshot.forEach(child => {
+
           chatMessages.push({
             id: child.key,
             ...child.val()
           });
+
         });
 
         renderMessages();
         if (isAdmin()) pruneMessageHistory();
-      },
-      error => {
-        messageListenerFailed = true;
-        messageListenerLoaded = false;
-        messageListenerUnsubscribe = null;
 
-        console.error("Message loading error:", error);
-        messagesEl.replaceChildren(
+      },
+
+      error => {
+
+        console.error(
+          "Message loading error:",
+          error
+        );
+
+        messagesEl.replaceChildren();
+
+        messagesEl.appendChild(
+
           makeElement(
             "div",
             "chat-msg",
-            `Unable to load chat (${error.code || error.message}). Check Realtime Database Rules and databaseURL.`
+            "Unable to load messages. Check Firebase database permissions."
           )
+
         );
+
         chatStatusEl.textContent =
-          `Firebase message listener failed: ${error.code || error.message}`;
+          "Chat loading failed. Please check your connection.";
+
       }
+
     );
+
   }
+
 
   /* =====================================
      CHAT SCROLL MANAGEMENT
@@ -1917,13 +2206,7 @@ header{padding:14px 0}
 
       } else {
 
-        // Other listeners may already be active, but the message listener can
-        // independently recover if its subscription was cancelled.
-        if (!messageListenerUnsubscribe || messageListenerFailed) {
-          startMessageListener();
-        } else {
-          renderMessages();
-        }
+        renderMessages();
 
       }
 

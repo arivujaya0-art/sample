@@ -817,12 +817,15 @@ header{padding:14px 0}
   let displayName = "";
 
   let presenceConnected = false;
-  let messageListenerLoaded = false;
-  let messageLoadTimeout = null;
 
   let presenceStarted = false;
 
   let listenersStarted = false;
+
+  // Message listener can be restarted independently if RTDB reconnects.
+  let messageListenerUnsubscribe = null;
+  let messageListenerLoaded = false;
+  let messageListenerFailed = false;
 
   let authFailed = false;
 
@@ -1222,22 +1225,27 @@ header{padding:14px 0}
 
       async snapshot => {
 
+        const wasConnected = presenceConnected;
         presenceConnected = snapshot.val() === true;
-        console.info("Firebase Realtime Database connected:", presenceConnected);
 
         if (!presenceConnected) {
-          viewerCountEl.textContent = "Connecting...";
-          if (!messageListenerLoaded) {
-            chatStatusEl.textContent =
-              "Connecting to Firebase Realtime Database...";
-          }
+          chatStatusEl.textContent = "Live chat connection lost. Reconnecting...";
           return;
         }
 
-        if (!messageListenerLoaded) {
-          chatStatusEl.textContent = "Database connected. Loading chat messages...";
-        }
         await updatePresence();
+
+        // Firebase normally reconnects listeners automatically. If the message
+        // listener was cancelled or had not completed its first sync, restart it
+        // once the database connection comes back.
+        if (
+          wasConnected === false &&
+          listenersStarted &&
+          (!messageListenerLoaded || messageListenerFailed)
+        ) {
+          console.info("Realtime Database reconnected; restarting message listener.");
+          startMessageListener();
+        }
 
       },
 
@@ -1279,8 +1287,6 @@ header{padding:14px 0}
       },
       error => {
         console.error("Blocked users listener error:", error);
-        chatStatusEl.textContent =
-          `Firebase blockedUsers read failed (${error.code || error.message}). Check Realtime Database Rules.`;
       }
     );
   }
@@ -1341,8 +1347,6 @@ header{padding:14px 0}
         );
 
         viewerCountEl.textContent = "Viewer count unavailable";
-        chatStatusEl.textContent =
-          `Firebase presence read failed (${error.code || error.message}). Check Realtime Database Rules.`;
 
       }
 
@@ -1641,95 +1645,58 @@ header{padding:14px 0}
 
   function startMessageListener() {
 
-    messageListenerLoaded = false;
-    messagesEl.replaceChildren(
-      makeElement("div", "chat-msg", "Connecting to live chat...")
-    );
-    chatStatusEl.textContent = "Connecting to Firebase Realtime Database...";
+    // Detach a previous listener before starting another one.
+    if (typeof messageListenerUnsubscribe === "function") {
+      messageListenerUnsubscribe();
+      messageListenerUnsubscribe = null;
+    }
 
-    if (messageLoadTimeout) clearTimeout(messageLoadTimeout);
-    messageLoadTimeout = window.setTimeout(() => {
-      if (messageListenerLoaded) return;
-      messagesEl.replaceChildren(
-        makeElement(
-          "div",
-          "chat-msg",
-          "Still connecting. Check your internet connection, Firebase databaseURL, and Realtime Database Rules."
-        )
-      );
-      chatStatusEl.textContent =
-        "Firebase chat has not responded yet. Check the connection and database permissions.";
-    }, 15000);
+    messageListenerLoaded = false;
+    messageListenerFailed = false;
+    chatStatusEl.textContent = presenceConnected
+      ? "Connected to Firebase. Loading messages..."
+      : "Connecting to Firebase Realtime Database...";
 
     const messagesQuery = query(
-
       ref(db, "messages"),
-
       limitToLast(MAX_MESSAGES)
-
     );
 
-    onValue(
-
+    messageListenerUnsubscribe = onValue(
       messagesQuery,
-
       snapshot => {
-
         messageListenerLoaded = true;
-        if (messageLoadTimeout) {
-          clearTimeout(messageLoadTimeout);
-          messageLoadTimeout = null;
-        }
+        messageListenerFailed = false;
 
         chatMessages = [];
-
         snapshot.forEach(child => {
-
           chatMessages.push({
             id: child.key,
             ...child.val()
           });
-
         });
 
         renderMessages();
         if (isAdmin()) pruneMessageHistory();
-
       },
-
       error => {
+        messageListenerFailed = true;
+        messageListenerLoaded = false;
+        messageListenerUnsubscribe = null;
 
-        console.error(
-          "Message loading error:",
-          error
-        );
-
-        messagesEl.replaceChildren();
-
-        messagesEl.appendChild(
-
+        console.error("Message loading error:", error);
+        messagesEl.replaceChildren(
           makeElement(
             "div",
             "chat-msg",
-            "Unable to load messages. Check Firebase database permissions."
+            `Unable to load chat (${error.code || error.message}). Check Realtime Database Rules and databaseURL.`
           )
-
         );
-
-        messageListenerLoaded = true;
-        if (messageLoadTimeout) {
-          clearTimeout(messageLoadTimeout);
-          messageLoadTimeout = null;
-        }
         chatStatusEl.textContent =
-          `Chat loading failed (${error.code || error.message}). Check Firebase Realtime Database Rules and databaseURL.`;
-
+          `Firebase message listener failed: ${error.code || error.message}`;
       }
-
     );
-
   }
-
 
   /* =====================================
      CHAT SCROLL MANAGEMENT
@@ -1950,7 +1917,13 @@ header{padding:14px 0}
 
       } else {
 
-        renderMessages();
+        // Other listeners may already be active, but the message listener can
+        // independently recover if its subscription was cancelled.
+        if (!messageListenerUnsubscribe || messageListenerFailed) {
+          startMessageListener();
+        } else {
+          renderMessages();
+        }
 
       }
 
